@@ -8,6 +8,8 @@ import type { ReportData, ReportRow } from '@/core/reportModel';
 import { emptyMeta, emptySettings } from '@/core/reportModel';
 import { getReportType, reportTypeFromHebrewName, type ReportTypeCode } from '@/core/reportTypes';
 import { nextReportNumber, type LocalCounter } from './reportNumber';
+import { serviceFor } from './reports/registry';
+import { writeTypeData } from './reports/ReportTypeService';
 import type { ReportStore, UpdatePatch } from './sync/reportStore';
 import {
   classifyZeroRowUpdate, decideFreshness, decideSave, diffReportData, isLocalDirty, verdictForUnknownVersion,
@@ -39,7 +41,8 @@ export function typeCodeOf(data: ReportData): ReportTypeCode {
 /** תוכן משמעותי — חוסם יצירת דוח ריק שנפתח אוטומטית. */
 export function hasMeaningfulContent(data: ReportData): boolean {
   const m = data.meta;
-  return Boolean(m.client || m.siteName || m.address || m.project || m.description || data.summary || data.notes.length);
+  const notes = Array.isArray(data.notes) ? data.notes : [];
+  return Boolean(m.client || m.siteName || m.address || m.project || m.description || notes.some((n) => String(n ?? '').trim()));
 }
 
 /**
@@ -49,7 +52,6 @@ export function hasMeaningfulContent(data: ReportData): boolean {
 export async function createNewReport(
   deps: SyncDeps,
   code: ReportTypeCode,
-  typeData: Record<string, unknown>,
   opts: { requireContentBeforeInsert?: boolean; inverterBrand?: string } = {},
 ): Promise<ReportData> {
   const id = (deps.newId ?? (() => crypto.randomUUID()))();
@@ -58,10 +60,15 @@ export async function createNewReport(
   settings.cloudReportId = id;
   settings.cloudInsertPending = true;
   settings.cloudInsertRequiresContent = !!opts.requireContentBeforeInsert;
-  return {
+  const data: ReportData = {
     meta: { ...emptyMeta(), reportNumber, date: new Date().toISOString().slice(0, 10) },
-    settings, notes: [], summary: '', typeData,
+    settings,
+    notes: [''], // כמו newState() בישן
+    customDeclaration: '',
   };
+  const svc = serviceFor(code);
+  writeTypeData(svc, data, svc.createEmpty());
+  return data;
 }
 
 function clone<T>(v: T): T {
@@ -166,9 +173,9 @@ export async function loadReport(store: ReportStore, id: string): Promise<{ row:
   data.settings.cloudInsertPending = false;
   data.settings.cloudEditSeq = 0;
   data.settings.cloudSyncedSeq = 0;
-  data.notes ??= [];
-  data.summary ??= '';
-  data.typeData ??= {};
+  // מוסיפים רק מפתחות שהישנה מכירה, ורק אם חסרים — לא ממציאים מבנה חדש בדוח
+  if (!Array.isArray(data.notes)) data.notes = [''];
+  data.meta = { ...emptyMeta(), ...data.meta };
   return { row, data };
 }
 
@@ -192,7 +199,7 @@ export async function resolveLoadCloud(store: ReportStore, id: string) {
 /** "שמור כעותק": דוח חדש (UUID ומספר חדשים) עם התוכן המקומי. המקור בענן לא נוגע. */
 export async function resolveSaveAsCopy(deps: SyncDeps, local: ReportData): Promise<{ copy: ReportData; outcome: SaveOutcome }> {
   const code = typeCodeOf(local);
-  const fresh = await createNewReport(deps, code, {});
+  const fresh = await createNewReport(deps, code);
   const copy = clone(local);
   copy.meta.reportNumber = fresh.meta.reportNumber;
   copy.settings = { ...copy.settings, ...fresh.settings, cloudClientId: local.settings.cloudClientId, cloudProjectId: local.settings.cloudProjectId };

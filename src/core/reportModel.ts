@@ -2,8 +2,15 @@
  * core/reportModel.ts — מודל הנתונים המשותף לכל סוגי הדוחות.
  *
  * report_data בענן הוא ה-state המלא של האפליקציה הישנה (state.meta / state.settings / ...).
- * כאן מוגדר רק החלק שהאפליקציה החדשה צריכה להבין בכל הסוגים; כל שאר השדות נשמרים
- * כמו שהם (passthrough) כדי שאף שדה לא יאבד בטעינה/שמירה בין הגרסה הישנה לחדשה.
+ *
+ * כלל תאימות מחייב: מקור האמת הוא המפתחות של האפליקציה הישנה, בשמות ובמבנה שלה.
+ * הסיבות (נבדקו מול mergeDefaults בישן, v2.2.552):
+ *   - הישנה לא קוראת מפתחות שהיא לא מכירה (typeData וכו') — עריכה בחדשה לא תיראה שם.
+ *   - בתוך אובייקט של סוג דוח (למשל transformerInspectionReport וכל שנאי בו) הישנה עושה
+ *     deepMergeGeneric — שמשאיר רק מפתחות שקיימים בברירת המחדל שלה. שדה חדש שם יימחק
+ *     בשמירה הבאה מהישנה. (ברמה העליונה היא עושה Object.assign ושומרת מפתחות לא מוכרים.)
+ *   - שם זהה במבנה שונה שובר את הישנה (למשל notes הוא מערך מחרוזות, לא אובייקטים).
+ * לכן typeData קיים רק כמעבר לסוגים שעדיין שלד.
  */
 import type { ReportTypeCode } from './reportTypes';
 
@@ -33,21 +40,29 @@ export interface ReportSettingsSync {
   [extra: string]: unknown;
 }
 
-/** הערה ממוספרת (מספור נעשה בזמן רינדור, לא נשמר). */
-export interface NumberedNote {
-  id: string;
-  text: string;
-}
-
 export interface ReportData {
   meta: ReportMeta;
   settings: ReportSettingsSync;
-  notes: NumberedNote[];
-  summary: string;
-  /** נתונים ייעודיים לסוג הדוח — המבנה מוגדר ב-services/reports/types/<code>.service.ts */
-  typeData: Record<string, unknown>;
+  /** state.notes — הערות ידניות, מערך מחרוזות (ברירת מחדל [""]); מוצגות ממוספרות. */
+  notes: string[];
+  /** state.customDeclaration — הצהרה נוספת חופשית אחרי 5 ההצהרות הקבועות. */
+  customDeclaration?: string;
+  /**
+   * מעבר בלבד — לסוגים שעדיין אין להם legacyKey בשירות. האפליקציה הישנה לא קוראת את המפתח,
+   * כך שעריכה כאן לא תיראה שם; סוג שהועבר עד הסוף כותב למפתח הישן שלו (למשל transformerInspectionReport).
+   */
+  typeData?: Record<string, unknown>;
   [legacyField: string]: unknown;
 }
+
+/** DECLARATIONS באפליקציה הישנה — "הערות בודק" קבועות, מודפסות תמיד בכל סוגי הדוח. */
+export const FIXED_DECLARATIONS = [
+  'מתקן החשמל נבדק עפ"י חוק החשמל ותקנותיו.',
+  'היתר הבדיקה מתייחס למתקן וללוחות כפי שהיו קיימים במועד הבדיקה.',
+  'כל שינוי עתידי במתקן מבטל את ההיתר הנוכחי ומחייב בדיקה נוספת.',
+  'לא נבדק ציוד חשמלי מטלטל ומכשירים המחוברים באמצעות תקע.',
+  'תוצאות הבדיקה תקפות ליום הבדיקה ואין הבודק אחראי לכל שינוי שלאחר הבדיקה.',
+] as const;
 
 /** שורה בטבלת reports ב-Supabase. */
 export interface ReportRow {
@@ -88,7 +103,7 @@ export const SECTION_ZONES = ['facility', 'content', 'summary', 'notes', 'declar
 export type SectionZone = (typeof SECTION_ZONES)[number];
 
 export type Block =
-  | { kind: 'fields'; rows: Array<{ label: string; value: string }> }
+  | { kind: 'fields'; rows: Array<{ label: string; value: string }>; caption?: string }
   | { kind: 'table'; columns: string[]; rows: string[][]; caption?: string }
   | { kind: 'checklist'; items: Array<{ label: string; status: 'ok' | 'bad' | 'na' | 'pending'; note?: string }> }
   | { kind: 'paragraph'; text: string }
@@ -139,8 +154,12 @@ export function formatLastUpdated(iso: string | null | undefined): string {
   return `${get('day')}.${get('month')}.${get('year')} ${get('hour')}:${get('minute')}`;
 }
 
+/** מקביל ל-state.meta של newState() בישן (השדות הרלוונטיים לדוח עצמו). */
 export function emptyMeta(): ReportMeta {
-  return { reportNumber: '', date: '', client: '', siteName: '', address: '', project: '', description: '' };
+  return {
+    reportNumber: '', date: '', issueDate: '', client: '', clientAddress: '', attentionTo: '', siteName: '', address: '',
+    project: '', description: '', testInstruments: '', requester: '', testInstrumentsSelected: [], testInstrumentsOther: '',
+  };
 }
 
 export function emptySettings(formTypeName: string): ReportSettingsSync {

@@ -6,6 +6,9 @@
   .sh-container{max-width:none;padding:0}
   .sh-doc{box-shadow:none;margin:0;padding:0;max-width:none}
   .sh-sec__title{break-after:avoid}
-  .sh-facility,.sh-table tr,.sh-signature{break-inside:avoid}
+  .sh-table tr,.sh-signature,.sh-kv-wrap{break-inside:avoid}
+  .sh-facility{break-inside:auto}
+  .sh-facility__head,.sh-kv-caption,.sh-table caption,.sh-table thead{break-after:avoid}
+  .sh-table thead{display:table-header-group}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }

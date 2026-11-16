@@ -13,7 +13,7 @@ function setup(deviceId = 'dev-A') {
 describe('שמירה לענן', () => {
   it('דוח חדש: INSERT אחד, ואז UPDATE לאותו UUID — המספר לא משתנה', async () => {
     const { m, deps } = setup();
-    const r = await createNewReport(deps, 'MAIN_PANEL', {});
+    const r = await createNewReport(deps, 'MAIN_PANEL');
     r.meta.client = 'לקוח';
     expect(await saveReport(deps, r)).toMatchObject({ kind: 'saved', created: true });
     const num = r.meta.reportNumber;
@@ -27,7 +27,7 @@ describe('שמירה לענן', () => {
 
   it('דוח בלי זהות → חסום, שום דבר לא נכתב', async () => {
     const { m, deps } = setup();
-    const r = await createNewReport(deps, 'SOIL', {});
+    const r = await createNewReport(deps, 'SOIL');
     r.settings.cloudReportId = null;
     expect((await saveReport(deps, r)).kind).toBe('blocked');
     expect(m.calls.insert + m.calls.update).toBe(0);
@@ -35,7 +35,7 @@ describe('שמירה לענן', () => {
 
   it('עריכה ממכשיר אחר → קונפליקט, הענן לא נדרס', async () => {
     const { m, deps } = setup();
-    const r = await createNewReport(deps, 'GENERAL', {});
+    const r = await createNewReport(deps, 'GENERAL');
     r.meta.client = 'מקור';
     await saveReport(deps, r);
     m.touchFromOtherDevice(r.settings.cloudReportId!);
@@ -47,7 +47,7 @@ describe('שמירה לענן', () => {
 
   it('דוח שאורכב בענן → קונפליקט "נמחק", בלי INSERT חלופי', async () => {
     const { m, deps } = setup();
-    const r = await createNewReport(deps, 'GENERAL', {});
+    const r = await createNewReport(deps, 'GENERAL');
     r.meta.client = 'x';
     await saveReport(deps, r);
     await m.store.archiveExplicit(r.settings.cloudReportId!, 'draft');
@@ -58,15 +58,15 @@ describe('שמירה לענן', () => {
 
   it('שמירת דוח לא מארכבת אף דוח אחר', async () => {
     const { m, deps } = setup();
-    for (let i = 0; i < 7; i++) { const r = await createNewReport(deps, 'SOIL', {}); r.meta.client = `c${i}`; await saveReport(deps, r); }
+    for (let i = 0; i < 7; i++) { const r = await createNewReport(deps, 'SOIL'); r.meta.client = `c${i}`; await saveReport(deps, r); }
     expect([...m.rows.values()].every((r) => r.status === 'draft')).toBe(true);
     expect(m.calls.archive).toBe(0);
   });
 
   it('מספר דוח תפוס לפני יצירה → מוקצה חדש', async () => {
     const { m, deps } = setup();
-    const a = await createNewReport(deps, 'SOIL', {}); a.meta.client = 'a'; await saveReport(deps, a);
-    const b = await createNewReport(deps, 'SOIL', {}); b.meta.client = 'b'; b.meta.reportNumber = a.meta.reportNumber;
+    const a = await createNewReport(deps, 'SOIL'); a.meta.client = 'a'; await saveReport(deps, a);
+    const b = await createNewReport(deps, 'SOIL'); b.meta.client = 'b'; b.meta.reportNumber = a.meta.reportNumber;
     await saveReport(deps, b);
     expect(b.meta.reportNumber).not.toBe(a.meta.reportNumber);
     expect(m.rows.size).toBe(2);
@@ -76,7 +76,7 @@ describe('שמירה לענן', () => {
 describe('חלונית קונפליקט', () => {
   it('שמור כעותק: דוח חדש עם מספר חדש, המקור לא נוגע', async () => {
     const { m, deps } = setup();
-    const r = await createNewReport(deps, 'GENERAL', {}); r.meta.client = 'מקור'; await saveReport(deps, r);
+    const r = await createNewReport(deps, 'GENERAL'); r.meta.client = 'מקור'; await saveReport(deps, r);
     m.touchFromOtherDevice(r.settings.cloudReportId!);
     r.meta.client = 'שלי';
     const before = m.rows.get(r.settings.cloudReportId!)!.updated_at;
@@ -89,7 +89,7 @@ describe('חלונית קונפליקט', () => {
 
   it('השווה: מחזיר את השדות השונים בלי לכתוב', async () => {
     const { m, deps } = setup();
-    const r = await createNewReport(deps, 'GENERAL', {}); r.meta.client = 'מקור'; await saveReport(deps, r);
+    const r = await createNewReport(deps, 'GENERAL'); r.meta.client = 'מקור'; await saveReport(deps, r);
     r.meta.client = 'שלי';
     const calls = m.calls.update;
     const diff = await resolveCompare(m.store, r);
@@ -99,7 +99,7 @@ describe('חלונית קונפליקט', () => {
 
   it('טעינה מהענן מסמנת גרסה ידועה ומאפשרת שמירה', async () => {
     const { m, deps } = setup();
-    const r = await createNewReport(deps, 'GENERAL', {}); r.meta.client = 'x'; await saveReport(deps, r);
+    const r = await createNewReport(deps, 'GENERAL'); r.meta.client = 'x'; await saveReport(deps, r);
     const loaded = await loadReport(m.store, r.settings.cloudReportId!);
     loaded!.data.meta.client = 'y';
     expect((await saveReport({ ...deps, deviceId: 'dev-B' }, loaded!.data)).kind).toBe('saved');
@@ -109,7 +109,7 @@ describe('חלונית קונפליקט', () => {
 describe('גרסאות', () => {
   it('שחזור גרסה עובר דרך UPDATE מותנה ויוצר גרסה חדשה', async () => {
     const { m, deps } = setup();
-    const r = await createNewReport(deps, 'GENERAL', {}); r.meta.client = 'v1'; await saveReport(deps, r);
+    const r = await createNewReport(deps, 'GENERAL'); r.meta.client = 'v1'; await saveReport(deps, r);
     await createVersion(deps, r);
     r.meta.client = 'v2'; await saveReport(deps, r);
     const { outcome, data } = await restoreVersion(deps, r, 1);
@@ -121,7 +121,7 @@ describe('גרסאות', () => {
 
   it('שחזור כשמכשיר אחר שמר בינתיים → קונפליקט, בלי דריסה', async () => {
     const { m, deps } = setup();
-    const r = await createNewReport(deps, 'GENERAL', {}); r.meta.client = 'v1'; await saveReport(deps, r);
+    const r = await createNewReport(deps, 'GENERAL'); r.meta.client = 'v1'; await saveReport(deps, r);
     await createVersion(deps, r);
     m.touchFromOtherDevice(r.settings.cloudReportId!);
     expect((await restoreVersion(deps, r, 1)).outcome.kind).toBe('conflict');

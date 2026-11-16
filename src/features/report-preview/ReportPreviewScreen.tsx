@@ -7,17 +7,17 @@ import { emptyMeta, emptySettings, type ReportData } from '@/core/reportModel';
 import { PICKER_ORDER, REPORT_CATEGORIES, REPORT_TYPES, typesInCategory, type ReportTypeCode } from '@/core/reportTypes';
 import { Card, ReportDocumentView, SelectField } from '@/components/report-template';
 import { EMPTY_COMPANY } from '@/services/companySettingsService';
-import { renderReportDocument, serviceFor, validateReport } from '@/services/reports';
+import { renderReportDocument, serviceFor, validateReport, writeTypeData } from '@/services/reports';
 
 function sampleReport(code: ReportTypeCode): ReportData {
   const svc = serviceFor(code);
-  return {
+  const data: ReportData = {
     meta: { ...emptyMeta(), reportNumber: `${REPORT_TYPES[code].numberPrefix}-1000-11-2026`, date: '2026-11-16', client: 'לקוח לדוגמה', siteName: 'אתר לדוגמה', address: 'רחוב הדוגמה 1, תל אביב' },
     settings: emptySettings(REPORT_TYPES[code].nameHe),
-    notes: [{ id: 'n1', text: 'יש לתקן את הליקויים ולהזמין בדיקה חוזרת.' }, { id: 'n2', text: 'הבדיקה תקפה למועד ביצועה בלבד.' }],
-    summary: 'המתקן נבדק בהתאם לחוק החשמל ותקנותיו.',
-    typeData: svc.createEmpty(),
+    notes: ['יש לתקן את הליקויים ולהזמין בדיקה חוזרת.'],
   };
+  writeTypeData(svc, data, svc.createEmpty());
+  return data;
 }
 
 export function ReportPreviewScreen() {

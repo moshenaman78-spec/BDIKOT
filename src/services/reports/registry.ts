@@ -4,7 +4,7 @@
  */
 import type { ReportData, ReportDocument } from '@/core/reportModel';
 import { reportTypeFromHebrewName, type ReportTypeCode } from '@/core/reportTypes';
-import { buildReportDocument, type ReportTypeService, type ValidationIssue } from './ReportTypeService';
+import { buildReportDocument, readTypeData, type ReportTypeService, type ValidationIssue } from './ReportTypeService';
 import { dcCableService } from './types/dcCable.service';
 import { evcsService } from './types/evcs.service';
 import { evDcService } from './types/evDc.service';
@@ -60,7 +60,7 @@ export function serviceForData(data: ReportData): AnyService {
 
 export function validateReport(data: ReportData): ValidationIssue[] {
   const svc = serviceForData(data);
-  return svc.validate(svc.normalize(data.typeData), data);
+  return svc.validate(readTypeData(svc, data), data);
 }
 
 export function renderReportDocument(data: ReportData, lastUpdatedAt: string | null = data.settings.cloudKnownUpdatedAt): ReportDocument {

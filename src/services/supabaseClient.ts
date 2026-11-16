@@ -34,13 +34,17 @@ export function setSupabaseForTests(c: SupabaseClient | null): void {
   client = c;
 }
 
-/** מזהה מכשיר קבוע (localStorage) — נשמר ב-report_data.settings.savedByDevice. */
+/**
+ * מזהה מכשיר קבוע — נשמר ב-report_data.settings.savedByDevice.
+ * אותו מפתח ופורמט כמו getDeviceId() בישן ('rdDeviceId'): /app/ ו-/ באותו דומיין חולקים
+ * localStorage, כך שאותו דפדפן נחשב אותו מכשיר בשתי האפליקציות.
+ */
 export function getDeviceId(): string {
-  const KEY = 'shaked-device-id';
+  const KEY = 'rdDeviceId';
   try {
     const existing = localStorage.getItem(KEY);
     if (existing) return existing;
-    const id = crypto.randomUUID();
+    const id = 'dev_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
     localStorage.setItem(KEY, id);
     return id;
   } catch {

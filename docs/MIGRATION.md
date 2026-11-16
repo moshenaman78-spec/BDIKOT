@@ -14,7 +14,7 @@
 | `src/components/report-template/` | רכיבי UI של העיצוב החדש + `ReportDocumentView` (תצוגה = הדפסה/PDF). |
 | `src/styles/` | `tokens.ts` (צבעים/גופנים במקום אחד), `theme.css`, `print.css`. |
 | `src/features/` | מסכים. כרגע `report-preview`. בהמשך תיקייה לכל סוג דוח (`features/reports/<code>/`). |
-| `tests/` | 62 בדיקות (vitest). |
+| `tests/` | 79 בדיקות (vitest), כולל תאימות מול הישנה. |
 
 ## 19 הסוגים — מצב העברה
 מקור: `REPORT_TYPE_CODE_TO_DISPLAY_NAME` ו-`getReportType()` ב-`js/app.js`. בדיקה `tests/reportTypes.test.ts` נכשלת אם הרשימה סוטה.
@@ -35,7 +35,7 @@
 | HV_CABLE | דוח בדיקת כבל מתח גבוה (VLF) | RPT | חלקי | renderHvCableReportCards |
 | FLEXIBLE | דוח גמיש | RPT | שלד | renderFlexibleReportCards |
 | MAIN_PANEL | דוח בדיקת לוח חשמל ראשי | HV | שלד | renderMainPanelReportCards |
-| TRANSFORMER_INSPECTION | דוח בדיקת שנאי מתח גבוה | TR | **מלא** | renderTransformerInspectionReportCards |
+| TRANSFORMER_INSPECTION | דוח בדיקת שנאי מתח גבוה | TR | **הועבר עד הסוף** (שירות + עורך + PDF + תאימות) | renderTransformerInspectionReportCards |
 | GENERATOR | דוח בדיקת גנרטור | RPT | שלד | renderGeneratorReportCards |
 | STRING_POLARITY | בדיקת קוטביות סטרינגים ולוחות DCCB | PV | שלד | renderStringPolarityReportCards |
 | PV_INSPECTION | טופס בדיקה של מתקן פוטו-וולטאי | PV | שלד | renderPvInspectionCards |
@@ -43,9 +43,35 @@
 
 "דוח משולב" אינו סוג נפרד: דוח עם `reportChapters` נשמר עם סוג הדוח הראשי ומוצג בתיקייה `📚 דוחות משולבים`.
 
-## ⚠️ פער מבני שחייב החלטה לפני העברת סוג
-באפליקציה הישנה הנתונים הייעודיים לסוג נמצאים **ברמה העליונה** של `report_data` (למשל `soilTest`, `fireForm3`, `panels`, `transformerInspection`...). במודל החדש הם תחת `report_data.typeData`.
-**TODO:** לכל סוג — לכתוב `fromLegacy(report_data)` / `toLegacy(typeData)` ב-service, ולכתוב **גם** לשדה הישן בשמירה, כדי שהאפליקציה הישנה תמשיך לפתוח דוחות שנערכו בחדשה. לא לבצע מיגרציית נתונים בענן.
+## כלל תאימות: כותבים למפתח הישן (הוחלט והוטמע בשנאי)
+נבדק מול `mergeDefaults` / `deepMergeGeneric` בישן:
+- הישנה לא קוראת מפתחות שהיא לא מכירה — לכן נתונים ב-`typeData` לא ייראו שם.
+- בתוך אובייקט של סוג דוח (למשל `transformerInspectionReport`, וכל שנאי בו) הישנה משאירה רק מפתחות שקיימים בברירת המחדל שלה. שדה חדש שם יימחק בשמירה הבאה מהישנה. ברמה העליונה היא שומרת מפתחות לא מוכרים (`Object.assign`).
+- **תוקן באג מהגרסה הקודמת של הבסיס:** `notes` הוגדר כמערך אובייקטים, אבל בישן הוא מערך מחרוזות. דוח שהיה נשמר מהחדשה היה מציג הערות שבורות בישנה. עכשיו `notes: string[]`, ו-`summary`/`typeData` לא נוספים לדוח.
+
+לכן כל שירות שהועבר מגדיר `legacyKey` וקורא/כותב רק אליו (`readTypeData`/`writeTypeData`). אין המרה ואין מיגרציית נתונים. שדה חדש באמת (שלא קיים בישן) — רק אחרי שהוא נוסף גם ל-`newState()`/`make*` בישן.
+
+## שנאי מתח גבוה — מה הועבר
+| חלק | קובץ |
+|---|---|
+| מבנה נתונים, קבועים, נרמול, שכפול/מחיקה, ליקויים, בדיקות לפני הפקה, פלט מסמך | `src/services/reports/types/transformerInspection.service.ts` |
+| עורך (01 פרטי המתקן, 02 שנאים, 03 ממצאים, 04 מסקנה, הערות, הערות בודק) | `src/features/reports/TRANSFORMER_INSPECTION/TransformerInspectionEditor.tsx` |
+| מסך: טיוטות שנאי בענן + חיפוש, דוח חדש מפורש, הדגמה מקומית, תצוגה/הדפסה, שמירה, קונפליקט | `.../TransformerInspectionScreen.tsx` |
+| עורך כללי: שמירה אוטומטית (5 שנ׳), גיבוי מקומי, קונפליקט | `src/features/report-editor/useReportEditor.ts`, `useCloud.ts` |
+| תאימות: סימולציה של טעינה בישן + נתונים במבנה אמיתי | `tests/legacyApp.ts`, `tests/fixtures/legacyTransformerReport.ts`, `tests/transformerInspection.test.ts` |
+
+הבדלים מכוונים מול הישן (הנתונים עצמם זהים):
+- ממצאים מסכמים ממוספרים רציף (בישן מחיקה השאירה חורים, למשל 1, 3).
+- כפתור "העתק ליקויים שסומנו לא תקין" לממצאים, וכפתור "סמן תקין לכל מה שטרם נבדק".
+- כפתור הוספת שנאי (כתום), בנוסף לשכפול. בישן היה רק שכפול.
+- בדיקות לפני הפקה: מסקנה חסרה (שגיאה), "תקין" עם ליקויים, "לא תקין" בלי הערה, ערך בידוד לא מספרי (אזהרות).
+- checklist קצר מ-22 בדוח ישן מרופד (בישן היה קורס).
+
+**לא הועבר (משותף ל-SMA / שנאי / לוח ראשי): ממסרי הגנה** (`state.protectionRelays`, `RELAY_LIBRARY`). הנתונים נשמרים כמו שהם בכל שמירה מהחדשה (נבדק), אבל עריכה והדפסה שלהם עדיין רק בישנה. לא מופיעים ב-PDF של החדשה. הצעד הבא: מודול משותף `components/protection-relays`.
+
+גם לא כאן: עמוד שער מלא (חתימה כתמונה, לוגו מההגדרות, פרטי מכשירים מטבלת הציוד), הצהרת חשמלאי מבצע (`showElectricianDeclaration`), תמונות. כולם משותפים לכל הסוגים.
+
+התחברות: `/app/` ו-`/` באותו דומיין חולקות את ההתחברות של Supabase. מי שמחובר בישנה מחובר גם כאן. מזהה המכשיר (`rdDeviceId`) ומונה מספרי הדוחות (`report-counter`) משותפים גם הם.
 
 ## כללי שמירה (נאכפים ב-`saveRules.ts`, נבדקים ב-`tests/`)
 1. זהות ומספר דוח קבועים: UPDATE לאותו UUID; `report_number` לא נשלח ב-UPDATE.
@@ -62,7 +88,7 @@
 
 ## צעדים הבאים מוצעים
 1. העלאת ה-foundation ומיזוג.
-2. `fromLegacy/toLegacy` לסוג אחד (מומלץ TRANSFORMER_INSPECTION — השירות כבר מלא) ובדיקה דו-כיוונית מול דוח אמיתי.
-3. עורך לסוג זה תחת `features/reports/TRANSFORMER_INSPECTION/` עם רכיבי `report-template/ui.tsx`.
+2. בדיקה ידנית של דוח שנאי אמיתי: פתיחה ב-`/app/`, עריכה, שמירה, ופתיחה שוב בישנה.
+3. מודול משותף לממסרי הגנה, ואז עמוד שער ותמונות.
 4. Vercel: rewrite של `/app/*` ל-`dist/app/index.html`; האפליקציה הישנה ב-`/` ללא שינוי.
 5. להמשיך סוג אחר סוג לפי שימוש.

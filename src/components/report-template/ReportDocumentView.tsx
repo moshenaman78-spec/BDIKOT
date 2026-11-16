@@ -17,7 +17,10 @@ function BlockView({ block }: { block: Block }) {
   switch (block.kind) {
     case 'fields':
       return block.rows.length ? (
-        <dl className="sh-kv">{block.rows.map((r, i) => [<dt key={`t${i}`}>{r.label}</dt>, <dd key={`d${i}`}>{r.value}</dd>])}</dl>
+        <div className="sh-kv-wrap">
+          {block.caption ? <div className="sh-kv-caption">{block.caption}</div> : null}
+          <dl className="sh-kv">{block.rows.map((r, i) => [<dt key={`t${i}`}>{r.label}</dt>, <dd key={`d${i}`}>{r.value}</dd>])}</dl>
+        </div>
       ) : null;
     case 'table':
       return (

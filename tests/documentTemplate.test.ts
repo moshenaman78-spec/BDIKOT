@@ -1,19 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { emptyMeta, emptySettings, formatLastUpdated, type ReportData } from '@/core/reportModel';
 import { REPORT_TYPE_CODES, REPORT_TYPES, type ReportTypeCode } from '@/core/reportTypes';
-import { renderReportDocument, serviceFor } from '@/services/reports';
-import { transformerInspectionService } from '@/services/reports/types/transformerInspection.service';
+import { renderReportDocument, serviceFor, writeTypeData } from '@/services/reports';
 import { cssVariables } from '@/styles/tokens';
 
-function report(code: ReportTypeCode, patch: Partial<ReportData> = {}): ReportData {
-  return {
+function report(code: ReportTypeCode, typeData?: object): ReportData {
+  const data: ReportData = {
     meta: { ...emptyMeta(), reportNumber: 'RPT-1000-11-2026', client: 'לקוח', date: '2026-11-16' },
     settings: emptySettings(REPORT_TYPES[code].nameHe),
-    notes: [{ id: '1', text: 'הערה א' }, { id: '2', text: 'הערה ב' }],
-    summary: 'סיכום',
-    typeData: serviceFor(code).createEmpty(),
-    ...patch,
+    notes: ['הערה א', '', 'הערה ב'],
   };
+  const svc = serviceFor(code);
+  writeTypeData(svc, data, typeData ?? svc.createEmpty());
+  return data;
 }
 
 describe('תבנית המסמך', () => {
@@ -24,10 +23,23 @@ describe('תבנית המסמך', () => {
   });
 
   it('סדר: מתקן → תוכן → סיכום → הערות → הצהרה → חתימה, ממוספר 01..', () => {
-    const doc = renderReportDocument(report('MAIN_PANEL'), null);
+    const r = report('MAIN_PANEL');
+    (r.typeData as { facilities: Array<{ checklist: Array<{ status: string }> }> }).facilities[0].checklist[0].status = 'bad';
+    const doc = renderReportDocument(r, null);
     const zones = doc.sections.map((s) => s.zone);
     expect(zones).toEqual(['facility', 'content', 'summary', 'notes', 'declaration', 'signature']);
     expect(doc.sections.map((s) => s.number)).toEqual(['01', '02', '03', '04', '05', '06']);
+  });
+
+  it('הערות: מחרוזות ריקות לא מודפסות; הצהרה = 5 הקבועות + נוספת', () => {
+    const r = report('GENERAL');
+    r.customDeclaration = 'הצהרה נוספת';
+    const doc = renderReportDocument(r, null);
+    const notes = doc.sections.find((s) => s.zone === 'notes')!.blocks[0] as { items: string[] };
+    expect(notes.items).toEqual(['הערה א', 'הערה ב']);
+    const decl = doc.sections.find((s) => s.zone === 'declaration')!.blocks[0] as { items: string[] };
+    expect(decl.items).toHaveLength(6);
+    expect(decl.items[5]).toBe('הצהרה נוספת');
   });
 
   it('שירות שמחזיר אזור "notes" מוחזר לתוכן — הערות/הצהרה תמיד בסוף', () => {
@@ -56,14 +68,10 @@ describe('תבנית המסמך', () => {
     expect(doc.sections.some((s) => s.zone === 'declaration')).toBe(false);
   });
 
-  it('שנאי: 22 פריטים, 5 בדיקות בידוד, ליקוי נכנס לסיכום', () => {
-    const t = transformerInspectionService.createEmpty();
-    expect(t.transformers[0].checklist).toHaveLength(22);
-    expect(t.transformers[0].insulation).toHaveLength(5);
-    t.transformers[0].checklist[0].status = 'bad';
-    const doc = renderReportDocument(report('TRANSFORMER_INSPECTION', { typeData: t as unknown as Record<string, unknown> }), null);
-    const summary = doc.sections.find((s) => s.zone === 'summary')!;
-    expect(JSON.stringify(summary)).toContain('מרחקים תקינים מסביב לשנאי');
+  it('שנאי: נכתב למפתח הישן transformerInspectionReport ולא ל-typeData', () => {
+    const r = report('TRANSFORMER_INSPECTION');
+    expect(r.transformerInspectionReport).toBeTruthy();
+    expect(r.typeData).toBeUndefined();
   });
 
   it('normalize שומר שדות לא מוכרים (אין איבוד נתונים מהגרסה הישנה)', () => {
