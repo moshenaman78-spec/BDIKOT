@@ -172,10 +172,10 @@ describe('שנאי — מסמך (תואם buildTransformerInspectionReportBlocks
     const data = legacyTransformerReportData() as unknown as ReportData;
     return renderReportDocument(data, '2026-11-16T08:00:00Z');
   };
-  it('סדר ומספור: 01 פרטי המתקן, 02 שנאים, 03 ממצאים, 04 מסקנה, ואז הערות והערות בודק', () => {
+  it('סדר ומספור: פרטי המתקן, שנאים, ממסרי הגנה (תוכן), ממצאים, מסקנה, ואז הערות והערות בודק', () => {
     const d = doc();
     expect(d.sections.map((s) => [s.number, s.title])).toEqual([
-      ['01', 'פרטי המתקן'], ['02', 'שנאים'], ['03', 'ממצאים מסכמים'], ['04', 'מסקנה'], ['05', 'הערות'], ['06', 'הערות בודק'], ['07', 'חתימה'],
+      ['01', 'פרטי המתקן'], ['02', 'שנאים'], ['03', 'ממסרי הגנה'], ['04', 'ממצאים מסכמים'], ['05', 'מסקנה'], ['06', 'הערות'], ['07', 'הערות בודק'], ['08', 'חתימה'],
     ]);
     expect(d.title).toBe('דוח בדיקת שנאי מתח גבוה');
   });
@@ -204,7 +204,7 @@ describe('שנאי — מסמך (תואם buildTransformerInspectionReportBlocks
     const data = legacyTransformerReportData() as unknown as ReportData;
     (data[LEGACY_KEY] as { summaryItems: Array<{ number: number; text: string }> }).summaryItems.push({ number: 4, text: '  ' });
     const d = renderReportDocument(data, null);
-    expect((d.sections[2].blocks[0] as { items: string[] }).items).toEqual(['שלט אזהרה דהוי', 'לנקות את חדר השנאים']);
+    expect((d.sections.find((x) => x.id === 'ti-summary')!.blocks[0] as { items: string[] }).items).toEqual(['שלט אזהרה דהוי', 'לנקות את חדר השנאים']);
     expect(JSON.stringify(d.sections)).not.toContain('TR-1203-10-2026');
     expect(d.reportNumber).toBe('TR-1203-10-2026');
   });

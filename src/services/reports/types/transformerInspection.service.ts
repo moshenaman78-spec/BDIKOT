@@ -207,10 +207,10 @@ export function collectDefects(d: TransformerInspectionReport): Finding[] {
   });
 }
 
-/** מוסיף לממצאים המסכמים ליקויים שעוד לא מופיעים שם (לא מכפיל). */
-export function appendDefectsToSummary(d: TransformerInspectionReport): TransformerInspectionReport {
+/** מוסיף לממצאים המסכמים ליקויים שעוד לא מופיעים שם (לא מכפיל). extra — למשל ליקויי ממסרי הגנה. */
+export function appendDefectsToSummary(d: TransformerInspectionReport, extra: Finding[] = []): TransformerInspectionReport {
   const existing = new Set(d.summaryItems.map((s) => s.text.trim()));
-  const fresh = collectDefects(d).map((f) => `${f.where}: ${f.text}`).filter((t) => !existing.has(t));
+  const fresh = [...collectDefects(d), ...extra].map((f) => `${f.where}: ${f.text}`).filter((t) => !existing.has(t));
   return { ...d, summaryItems: renumberSummary([...d.summaryItems, ...fresh.map((text) => ({ number: 0, text }))]) };
 }
 

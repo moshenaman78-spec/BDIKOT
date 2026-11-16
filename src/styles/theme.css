@@ -121,3 +121,17 @@ body{background:var(--sh-bg);color:var(--sh-text);font-family:var(--sh-font-ui);
 .sh-modal__btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:right;border:1px solid var(--sh-sky);background:var(--sh-sky-soft);border-radius:10px;padding:10px 12px;margin:8px 0;font:inherit;cursor:pointer;color:var(--sh-text)}
 .sh-modal__btn span{font-size:.8rem;color:var(--sh-text-dim)}
 .sh-modal__btn.is-cancel{background:#fff;border-color:var(--sh-line)}
+
+/* ממסרי הגנה — מתגי DIP */
+.sh-add-chip{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.9rem;margin-inline-end:10px}
+.sh-dip{margin:8px 0}
+.sh-dip__label{font-weight:600;font-size:.88rem;margin-bottom:4px}
+.sh-dip__row{display:flex;flex-wrap:nowrap;gap:4px;justify-content:flex-start}
+.sh-dip__sw{flex:1 1 0;min-width:0;max-width:36px;height:52px;border:1px solid var(--sh-input-border);border-radius:6px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:3px 0;cursor:pointer;font:inherit;font-size:.72rem;color:var(--sh-text-dim)}
+.sh-dip__sw i{display:block;width:18px;height:24px;border-radius:3px;background:var(--sh-panel2);border:1px solid var(--sh-line);position:relative}
+.sh-dip__sw i::after{content:"";position:absolute;inset-inline:2px;height:10px;bottom:2px;background:#9AA8B6;border-radius:2px}
+.sh-dip__sw.is-on{border-color:var(--sh-navy);color:var(--sh-navy)}
+.sh-dip__sw.is-on i{background:var(--sh-navy)}
+.sh-dip__sw.is-on i::after{top:2px;bottom:auto;background:#fff}
+.sh-dip__sw:focus-visible{outline:3px solid var(--sh-sky);outline-offset:1px}
+.sh-table td.sh-ltr{text-align:left;unicode-bidi:isolate}

@@ -19,6 +19,7 @@
 import type { Block, DocumentSection, ReportData, ReportDocument } from '@/core/reportModel';
 import { FIXED_DECLARATIONS, formatLastUpdated, orderSections } from '@/core/reportModel';
 import { dynamicReportTitle, getReportType, type ReportTypeCode, type ReportTypeDefinition } from '@/core/reportTypes';
+import { relayFindings, relaysApply, relaysSection } from '@/services/shared/protectionRelays';
 
 export interface ValidationIssue {
   path: string;
@@ -147,12 +148,16 @@ export function buildReportDocument<T extends object>(
   const own = service.buildSections(typeData, data).map((s) =>
     s.zone === 'content' || s.zone === 'summary' ? s : { ...s, zone: 'content' as const },
   );
+  // מודולים משותפים (תוכן — תמיד לפני הסיכום)
+  const shared = relaysApply(def.code) ? [relaysSection(data)].filter((s): s is DocumentSection => !!s) : [];
+  const findings = [...service.findings(typeData), ...(relaysApply(def.code) ? relayFindings(data) : [])];
   const sections: DocumentSection[] = isOfficial
     ? own // טופס רשמי: המבנה כולו מוגדר בשירות, בלי סעיפי החברה
     : [
         facilitySection(data),
         ...own,
-        ...[service.showFindingsTable ? findingsSection(service.findings(typeData)) : null, notesSection(data)]
+        ...shared,
+        ...[service.showFindingsTable ? findingsSection(findings) : null, notesSection(data)]
           .filter((s): s is DocumentSection => !!s),
         declarationSection(data),
         { id: 'signature', zone: 'signature', title: 'חתימה', icon: '🖊️', blocks: [] },

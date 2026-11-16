@@ -104,7 +104,7 @@ export type SectionZone = (typeof SECTION_ZONES)[number];
 
 export type Block =
   | { kind: 'fields'; rows: Array<{ label: string; value: string }>; caption?: string }
-  | { kind: 'table'; columns: string[]; rows: string[][]; caption?: string }
+  | { kind: 'table'; columns: string[]; rows: string[][]; caption?: string; /** אינדקסי עמודות שמוצגות משמאל לימין (ערכים+יחידות, מתגי DIP). */ ltrColumns?: number[] }
   | { kind: 'checklist'; items: Array<{ label: string; status: 'ok' | 'bad' | 'na' | 'pending'; note?: string }> }
   | { kind: 'paragraph'; text: string }
   | { kind: 'notes'; items: string[] }

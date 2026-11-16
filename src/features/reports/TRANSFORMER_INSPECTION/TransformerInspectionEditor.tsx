@@ -10,7 +10,9 @@ import { FIXED_DECLARATIONS, type ReportData } from '@/core/reportModel';
 import {
   BigCheckbox, Card, ChoiceChips, ComboField, FacilityCard, Field, Grid2, RoundButton, SubHead, TextAreaField, type Choice,
 } from '@/components/report-template';
+import { ProtectionRelaysEditor } from '@/components/protection-relays';
 import { readTypeData, writeTypeData } from '@/services/reports/ReportTypeService';
+import { relayFindings } from '@/services/shared/protectionRelays';
 import {
   TI_CHECKLIST, TI_INSULATION_TESTS, TI_OPTIONS, addTransformer, appendDefectsToSummary, collectDefects, duplicateTransformer,
   removeTransformer, renumberSummary, transformerInspectionService as svc, transformerTitle,
@@ -43,7 +45,7 @@ export function TransformerInspectionEditor({ data, mutate, confirm = (m) => win
   const meta = (k: string) => String(data.meta[k] ?? '');
   const setMeta = (k: string) => (v: string) => mutate((d) => { d.meta[k] = v; });
   const notes = data.notes.length ? data.notes : [''];
-  const defects = collectDefects(ti);
+  const defects = [...collectDefects(ti), ...relayFindings(data)];
 
   return (
     <div className="sh-editor">
@@ -74,7 +76,9 @@ export function TransformerInspectionEditor({ data, mutate, confirm = (m) => win
         ))}
       </Card>
 
-      <Card title="03 · ממצאים מסכמים" icon="📋">
+      <ProtectionRelaysEditor data={data} mutate={mutate} confirm={confirm} />
+
+      <Card title="ממצאים מסכמים" icon="📋">
         {ti.summaryItems.map((s, i) => (
           <div className="sh-numbered" key={i}>
             <span className="sh-numbered__n">{i + 1}</span>
@@ -87,14 +91,14 @@ export function TransformerInspectionEditor({ data, mutate, confirm = (m) => win
           <RoundButton kind="add" label="הוסף ממצא" onClick={() => updTi((d) => ({ ...d, summaryItems: renumberSummary([...d.summaryItems, { number: 0, text: '' }]) }))} />
           <span className="sh-dim">הוסף ממצא</span>
           {defects.length ? (
-            <button type="button" className="sh-btn" onClick={() => updTi(appendDefectsToSummary)}>
+            <button type="button" className="sh-btn" onClick={() => { const extra = relayFindings(data); updTi((d) => appendDefectsToSummary(d, extra)); }}>
               ⤵ העתק {defects.length} ליקויים שסומנו "לא תקין"
             </button>
           ) : null}
         </div>
       </Card>
 
-      <Card title="04 · מסקנה" icon="✅">
+      <Card title="מסקנה" icon="✅">
         <ChoiceChips ariaLabel="מסקנה" value={ti.conclusion.status} choices={CONCLUSION_CHOICES} onChange={(v) => updTi((d) => { d.conclusion.status = v; })} />
         <TextAreaField label="הרחבה / הערות נוספות (אופציונלי)" value={ti.conclusion.freeText} onChange={(v) => updTi((d) => { d.conclusion.freeText = v; })} />
       </Card>
