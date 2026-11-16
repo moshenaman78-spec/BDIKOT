@@ -97,9 +97,10 @@ export interface ReportVersionRow {
 
 /**
  * אזורי הדוח, לפי הסדר המחייב:
- *   facility → content (לוחות/מתקנים + כל הטקסט) → summary → notes → declaration → signature
+ *   facility → content (לוחות/מתקנים + כל הטקסט) → summary → notes → declaration → signature → appendix
+ * appendix = נספחים אחרי החתימה (תיעוד תמונות, צילום רישיון בודק), כמו בישן.
  */
-export const SECTION_ZONES = ['facility', 'content', 'summary', 'notes', 'declaration', 'signature'] as const;
+export const SECTION_ZONES = ['facility', 'content', 'summary', 'notes', 'declaration', 'signature', 'appendix'] as const;
 export type SectionZone = (typeof SECTION_ZONES)[number];
 
 export type Block =
@@ -108,8 +109,24 @@ export type Block =
   | { kind: 'checklist'; items: Array<{ label: string; status: 'ok' | 'bad' | 'na' | 'pending'; note?: string }> }
   | { kind: 'paragraph'; text: string }
   | { kind: 'notes'; items: string[] }
-  | { kind: 'photos'; items: Array<{ storagePath: string; caption?: string }> }
+  | { kind: 'photos'; perPage: number; items: PhotoItem[] }
+  /** פס מסקנה צבעוני (אישור חשמול). */
+  | { kind: 'banner'; text: string; tone: 'ok' | 'warn' | 'bad' | 'na' }
+  /** בלוק לחתימה ידנית: טקסט + שורות ריקות לשם/רישיון/חתימה/תאריך. */
+  | { kind: 'signoff'; title: string; text: string }
+  /** תמונה בעמוד מלא (צילום רישיון בודק). src נפתר בתצוגה (imageKey). */
+  | { kind: 'image'; imageKey: 'inspectorLicense'; caption?: string }
   | { kind: 'facility'; title: string; subtitle?: string; blocks: Block[] };
+
+export interface PhotoItem {
+  number: number;
+  title: string;
+  /** מקור מקומי (data:) — אם יש. */
+  dataUrl: string;
+  /** נתיב בדלי report-files — נפתר לקישור/נתונים בתצוגה. */
+  cloudPath: string;
+  notes: string[];
+}
 
 export interface DocumentSection {
   id: string;
@@ -118,6 +135,8 @@ export interface DocumentSection {
   icon?: string;
   /** "01", "02"... — נקבע ע"י orderSections, לא ע"י השירות. */
   number?: string;
+  /** להתחיל בעמוד חדש בהדפסה. */
+  pageBreakBefore?: boolean;
   blocks: Block[];
 }
 
@@ -130,7 +149,20 @@ export interface ReportDocument {
   /** ISO — מוצג כ"עודכן לאחרונה: dd.mm.yyyy hh:mm". */
   lastUpdatedAt: string | null;
   documentKind: 'company-letterhead' | 'official-form';
+  /** עמוד שער (רק במסמך חברה). */
+  cover: CoverPage | null;
+  /** פוטר בכל עמוד בהדפסה. */
+  footerText: string;
   sections: DocumentSection[];
+}
+
+/** עמוד השער — כמו buildCoverPage בישן: כותרת, מספר דוח, טבלת פרטים, הצהרת חשמלאי, חתימה. */
+export interface CoverPage {
+  title: string;
+  reportNumber: string;
+  rows: Array<{ label: string; value: string }>;
+  electrician: { text: string; name: string; licenseType: string; licenseNo: string; date: string } | null;
+  inspectorName: string;
 }
 
 /** ממיין סעיפים לפי אזור (יציב בתוך אזור) ומספר אותם 01, 02, ... */

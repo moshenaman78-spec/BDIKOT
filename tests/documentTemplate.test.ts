@@ -27,8 +27,10 @@ describe('תבנית המסמך', () => {
     (r.typeData as { facilities: Array<{ checklist: Array<{ status: string }> }> }).facilities[0].checklist[0].status = 'bad';
     const doc = renderReportDocument(r, null);
     const zones = doc.sections.map((s) => s.zone);
-    expect(zones).toEqual(['facility', 'content', 'summary', 'notes', 'declaration', 'signature']);
-    expect(doc.sections.map((s) => s.number)).toEqual(['01', '02', '03', '04', '05', '06']);
+    // "פרטי המתקן" בעמוד השער (כמו בישן), לא כסעיף
+    expect(zones).toEqual(['content', 'summary', 'notes', 'declaration', 'signature']);
+    expect(doc.sections.map((s) => s.number)).toEqual(['01', '02', '03', '04', '05']);
+    expect(doc.cover?.title).toBe('דוח בדיקת לוח חשמל ראשי');
   });
 
   it('הערות: מחרוזות ריקות לא מודפסות; הצהרה = 5 הקבועות + נוספת', () => {

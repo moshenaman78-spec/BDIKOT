@@ -69,7 +69,7 @@ export function facilityBlock(f: Facility, fallbackName: string): Block {
   if (f.checklist.length) blocks.push(checklistBlock(f.checklist));
   if (f.measurements.length) blocks.push(measurementTable('מדידות', f.measurements));
   if (f.notes.trim()) blocks.push({ kind: 'paragraph', text: f.notes.trim() });
-  if (f.photos.length) blocks.push({ kind: 'photos', items: f.photos });
+  if (f.photos.length) blocks.push({ kind: 'photos', perPage: 4, items: f.photos.map((ph, i) => ({ number: i + 1, title: ph.caption, dataUrl: '', cloudPath: ph.storagePath, notes: [] })) });
   return { kind: 'facility', title: f.name || fallbackName, blocks };
 }
 

@@ -66,7 +66,7 @@ export function outcomeText(o: SaveOutcome | null, dirty: boolean): string {
 
 export interface ConflictState { deleted: boolean; diff: FieldDiff[] | null; busy: boolean }
 
-export function useReportEditor(initial: ReportData, deps: SyncDeps | null) {
+export function useReportEditor(initial: ReportData, deps: SyncDeps | null, opts: { onSaved?: (o: SaveOutcome) => void } = {}) {
   const [data, setData] = useState<ReportData>(initial);
   const [saving, setSaving] = useState(false);
   const [outcome, setOutcome] = useState<SaveOutcome | null>(null);
@@ -75,6 +75,8 @@ export function useReportEditor(initial: ReportData, deps: SyncDeps | null) {
   const dataRef = useRef(data);
   dataRef.current = data;
   const savingRef = useRef(false);
+  const onSavedRef = useRef(opts.onSaved);
+  onSavedRef.current = opts.onSaved;
 
   useEffect(() => { setData(initial); setOutcome(null); setConflict(null); }, [initial]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3500); return () => clearTimeout(t); }, [toast]);
@@ -97,7 +99,12 @@ export function useReportEditor(initial: ReportData, deps: SyncDeps | null) {
     try {
       const o = await saveReport(deps, snapshot);
       setOutcome(o);
-      if (o.kind === 'saved') setData((cur) => { const next = applySyncResult(cur, snapshot); writeBackup(next); return next; });
+      if (o.kind === 'saved') {
+        const next = applySyncResult(dataRef.current, snapshot);
+        dataRef.current = next;
+        setData((cur) => { const n = applySyncResult(cur, snapshot); writeBackup(n); return n; });
+        onSavedRef.current?.(o);
+      }
       else if (o.kind === 'conflict') setConflict({ deleted: o.deleted, diff: null, busy: false });
       return o;
     } finally {
@@ -144,5 +151,7 @@ export function useReportEditor(initial: ReportData, deps: SyncDeps | null) {
     }
   }, [deps, conflict]);
 
-  return { data, mutate, save, saving, outcome, dirty, conflict, resolveConflict, toast, setToast, statusText: outcomeText(outcome, dirty) };
+  const getData = useCallback(() => dataRef.current, []);
+
+  return { data, getData, mutate, save, saving, outcome, dirty, conflict, resolveConflict, toast, setToast, statusText: outcomeText(outcome, dirty) };
 }

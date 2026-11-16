@@ -14,7 +14,7 @@
 | `src/components/report-template/` | רכיבי UI של העיצוב החדש + `ReportDocumentView` (תצוגה = הדפסה/PDF). |
 | `src/styles/` | `tokens.ts` (צבעים/גופנים במקום אחד), `theme.css`, `print.css`. |
 | `src/features/` | מסכים. כרגע `report-preview`. בהמשך תיקייה לכל סוג דוח (`features/reports/<code>/`). |
-| `tests/` | 115 בדיקות (vitest), כולל תאימות מול הישנה. |
+| `tests/` | 136 בדיקות (vitest), כולל תאימות מול הישנה. |
 
 ## 19 הסוגים — מצב העברה
 מקור: `REPORT_TYPE_CODE_TO_DISPLAY_NAME` ו-`getReportType()` ב-`js/app.js`. בדיקה `tests/reportTypes.test.ts` נכשלת אם הרשימה סוטה.
@@ -83,7 +83,31 @@
 
 ב-SMA ובלוח הראשי (שעדיין שלדים) הממסרים כבר מודפסים בתצוגה המקדימה של החדשה. העריכה של הסוגים האלה עדיין בישנה, ו-`ProtectionRelaysEditor` מוכן לשילוב בעורכים שלהם כשיועברו.
 
-גם לא כאן: עמוד שער מלא (חתימה כתמונה, לוגו מההגדרות, פרטי מכשירים מטבלת הציוד), הצהרת חשמלאי מבצע (`showElectricianDeclaration`), תמונות. כולם משותפים לכל הסוגים.
+## דוח שנאי — מוכן לשטח (עמוד שער, תמונות, הצהרות)
+| חלק | קובץ | מקור בישן |
+|---|---|---|
+| הגדרות חברה — **קריאה בלבד**, בפורמט הישן (`settings_json` + `logo_path`/`signature_path`/`stamp_path`), עם נפילה להגדרות שבדוח | `services/companySettingsService.ts` | applyCloudCompanySettings |
+| עמוד שער: לוגו, כותרת, מספר דוח, טבלת פרטים באותו סדר, מכשירי בדיקה עם דגם/מס' סידורי/תוקף כיול, הצהרת חשמלאי, חתימת הבודק | `ReportTypeService.buildCover`, `ReportDocumentView.CoverPageView` | buildCoverPage |
+| פוטר בכל עמוד: לוגו תחתון, פרטי החברה, חתימה | `ReportDocumentView`, `print.css` | buildFooterHtml |
+| מכשירי בדיקה + תוקף כיול (טבלת `equipment`, קריאה בלבד) | `services/shared/testInstruments.ts`, `components/shared-sections/TestInstrumentsPicker.tsx` | instrumentDetailsText, getCalibrationStatus |
+| הצהרת חשמלאי מבצע | `services/shared/electricianDeclaration.ts`, `ElectricianDeclarationEditor.tsx` | getElectricianDeclarationData, buildElectricianDeclarationBlock |
+| אישור חשמול + אישור תיקון ליקויים | `services/shared/approval.ts`, `ApprovalEditor.tsx` | approvalStatus, APPROVAL_OPTIONS |
+| תיעוד תמונות: צילום/גלריה, דחיסה 1400px, כותרת, הערות 1.1/1.2, סדר, העלאה ל-`report-files` (גם ממתינות אחרי יצירה) | `services/shared/photos.ts`, `services/photoUpload.ts`, `PhotosEditor.tsx` | generalPhotos, makePhotoEntry, uploadFileToCloudStorage, processPendingPhotoUploads |
+| צילום רישיון בודק כנספח (אם מסומן בהגדרות) | `licenseSection` | buildInspectorLicenseBlock |
+
+נשמר באותם מפתחות כמו בישן: `generalPhotos`, `approvalStatus`, `showElectricianDeclaration`, `electricianDeclarationText`, `workingElectrician*`, `meta.testInstrumentsSelected`, `meta.testInstrumentsOther`, `meta.issueDate`.
+
+מה כותבים לענן ומה לא: האפליקציה החדשה כותבת רק לטבלה `reports` (השמירה המותנית, כמו קודם) ולדלי `report-files` (תמונות של הדוח, `upsert: false`). את `company_settings` ואת `equipment` היא רק קוראת. העריכה של שתיהן נשארת באפליקציה הישנה. **תוקן:** `companySettingsService` הקודם קרא עמודות שהישנה לא משתמשת בהן, וגם כלל פונקציית שמירה בפורמט אחר. הפונקציה הוסרה.
+
+הבדלים מכוונים מול הישן:
+- **חתימת החשמלאי:** בישן, בסוגים הגנריים, משבצת חתימת החשמלאי הציגה את חתימת הבודק מההגדרות. כאן המשבצת ריקה לחתימה ידנית. חתימת הבודק מופיעה רק במקומות של הבודק (עמוד השער, החתימה, הפוטר).
+- **"פרטי המתקן"** לא מודפסים כסעיף נפרד. הם בעמוד השער, כמו בישן, ולכן המספור בדוח מתחיל ב-01 שנאים.
+- **"אישור חשמול"** מודפס בסיכום, לפני ההערות. בישן הוא בבלוק "אישור" שבסוף.
+- **מכשירי בדיקה:** בדיקות לפני הפקה מתריעות על כיול שפג (שגיאה) או שיפוג תוך 60 יום (אזהרה). בישן זו חלונית נפרדת.
+- **הדפסה:** לפני הדפסה ממתינים שכל התמונות ייטענו. לוגו, חתימה ותמונות ענן מורדים לנתונים מקומיים, כך שאין קישורים פגי תוקף ב-PDF (כמו התיקון בישן v2.368).
+
+**נבדק:** 136 בדיקות יחידה, ובדיקה בדפדפן מול Supabase מדומה (כל הבקשות מיורטות בדפדפן, אפס בקשות לענן אמיתי). התרחיש: דוח חדש, 2 תמונות לפני היצירה (ממתינות), שמירה (INSERT), העלאה אוטומטית, שמירה מותנית של הנתיבים, תצוגה מקדימה, PDF של 4 עמודים.
+**לא נבדק:** מול Supabase האמיתי. בפרט לא נבדקו הרשאות הדלי וה-RLS בהעלאה מ-`/app/`.
 
 התחברות: `/app/` ו-`/` באותו דומיין חולקות את ההתחברות של Supabase. מי שמחובר בישנה מחובר גם כאן. מזהה המכשיר (`rdDeviceId`) ומונה מספרי הדוחות (`report-counter`) משותפים גם הם.
 
@@ -102,7 +126,7 @@
 
 ## צעדים הבאים מוצעים
 1. העלאת ה-foundation ומיזוג.
-2. בדיקה ידנית של דוח שנאי אמיתי: פתיחה ב-`/app/`, עריכה, שמירה, ופתיחה שוב בישנה.
-3. עמוד שער (לוגו/חתימה מההגדרות) ותמונות — משותפים לכל הסוגים.
+2. בדיקה ידנית של דוח שנאי אמיתי מול הענן: פתיחה ב-`/app/`, עריכה, צילום תמונה, שמירה, הדפסה, ופתיחה שוב בישנה.
+3. העברת סוג הדוח הבא (המודולים המשותפים — שער, תמונות, הצהרות, ממסרים — כבר מוכנים).
 4. Vercel: rewrite של `/app/*` ל-`dist/app/index.html`; האפליקציה הישנה ב-`/` ללא שינוי.
 5. להמשיך סוג אחר סוג לפי שימוש.

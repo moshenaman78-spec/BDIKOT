@@ -172,15 +172,16 @@ describe('שנאי — מסמך (תואם buildTransformerInspectionReportBlocks
     const data = legacyTransformerReportData() as unknown as ReportData;
     return renderReportDocument(data, '2026-11-16T08:00:00Z');
   };
-  it('סדר ומספור: פרטי המתקן, שנאים, ממסרי הגנה (תוכן), ממצאים, מסקנה, ואז הערות והערות בודק', () => {
+  it('סדר ומספור: עמוד שער, שנאים, ממסרי הגנה (תוכן), ממצאים, מסקנה, הערות, הערות בודק, חתימה, תמונות', () => {
     const d = doc();
+    expect(d.cover?.rows[0]).toEqual({ label: 'מזמין הבדיקה', value: 'לקוח בע"מ' });
     expect(d.sections.map((s) => [s.number, s.title])).toEqual([
-      ['01', 'פרטי המתקן'], ['02', 'שנאים'], ['03', 'ממסרי הגנה'], ['04', 'ממצאים מסכמים'], ['05', 'מסקנה'], ['06', 'הערות'], ['07', 'הערות בודק'], ['08', 'חתימה'],
+      ['01', 'שנאים'], ['02', 'ממסרי הגנה'], ['03', 'ממצאים מסכמים'], ['04', 'מסקנה'], ['05', 'הערות'], ['06', 'הערות בודק'], ['07', 'חתימה'], ['08', 'תיעוד תמונות'],
     ]);
     expect(d.title).toBe('דוח בדיקת שנאי מתח גבוה');
   });
   it('רק פריטים עם סטטוס, רק בדיקות בידוד מסומנות, שדות ריקים לא מודפסים', () => {
-    const tr = doc().sections[1].blocks[0] as { kind: string; title: string; blocks: Array<{ kind: string; caption?: string; rows: unknown[] }> };
+    const tr = doc().sections[0].blocks[0] as { kind: string; title: string; blocks: Array<{ kind: string; caption?: string; rows: unknown[] }> };
     expect(tr.title).toBe('שנאי מספר 1 — TMC 1000');
     const visual = tr.blocks.find((b) => b.caption === 'בדיקות ויזואליות')!;
     expect(visual.rows).toHaveLength(20); // 20 עם סטטוס מתוך 22
@@ -196,7 +197,7 @@ describe('שנאי — מסמך (תואם buildTransformerInspectionReportBlocks
     const data = legacyTransformerReportData() as unknown as ReportData;
     (data[LEGACY_KEY] as { transformers: Array<{ checklistEnabled: boolean }> }).transformers[0].checklistEnabled = false;
     const d = renderReportDocument(data, null);
-    const tr = d.sections[1].blocks[0] as { blocks: Array<{ caption?: string }> };
+    const tr = d.sections[0].blocks[0] as { blocks: Array<{ caption?: string }> };
     expect(tr.blocks.some((b) => b.caption === 'בדיקות ויזואליות')).toBe(false);
     expect(d.sections.some((s) => s.id === 'findings')).toBe(false);
   });

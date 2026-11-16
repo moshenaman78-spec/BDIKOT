@@ -16,10 +16,15 @@
  * buildReportDocument מוסיף את הסעיפים המשותפים ואוכף את הסדר:
  *   פרטי המתקן → תוכן (לוחות + כל הטקסט) → סיכום → הערות → הצהרה → חתימה.
  */
-import type { Block, DocumentSection, ReportData, ReportDocument } from '@/core/reportModel';
+import type { Block, CoverPage, DocumentSection, ReportData, ReportDocument } from '@/core/reportModel';
 import { FIXED_DECLARATIONS, formatLastUpdated, orderSections } from '@/core/reportModel';
 import { dynamicReportTitle, getReportType, type ReportTypeCode, type ReportTypeDefinition } from '@/core/reportTypes';
+import { EMPTY_PROFILE, type CompanyProfile } from '@/services/companySettingsService';
+import { approvalApplies, approvalSection } from '@/services/shared/approval';
+import { electricianBlock } from '@/services/shared/electricianDeclaration';
+import { photosSection } from '@/services/shared/photos';
 import { relayFindings, relaysApply, relaysSection } from '@/services/shared/protectionRelays';
+import { formatDateIL, instrumentsCoverText, type Equipment } from '@/services/shared/testInstruments';
 
 export interface ValidationIssue {
   path: string;
@@ -97,22 +102,53 @@ export function mergeDefaults<T extends object>(defaults: T, raw: unknown): T {
 
 /* ---------------------- סעיפים משותפים ---------------------- */
 
-function facilitySection(data: ReportData): DocumentSection {
+export interface DocumentOptions {
+  /** הגדרות חברה (מהענן, עם נפילה להגדרות שבדוח). בלי — עמוד שער בלי פרטי בודק. */
+  company?: CompanyProfile;
+  /** רשימת מכשירי הבדיקה מהענן — לדגם/מס' סידורי/תוקף כיול בעמוד השער. */
+  equipment?: Equipment[];
+  /** "היום" — לתאריך הפקה כשלא נקבע (ולבדיקות). */
+  today?: Date;
+}
+
+/** עמוד השער — אותן שורות ואותו סדר כמו buildCoverPage בישן; שורה ריקה לא מוצגת. */
+export function buildCover(title: string, data: ReportData, opts: DocumentOptions): CoverPage {
   const m = data.meta;
-  // מספר הדוח לא מופיע כאן — הוא מוצג פעם אחת בלבד, בכותרת העמוד.
-  const instruments = Array.isArray(m.testInstrumentsSelected) ? (m.testInstrumentsSelected as string[]).join(', ') : '';
-  const rows = [
-    { label: 'מזמין הבדיקה', value: m.client },
-    { label: 'לידי (איש קשר)', value: String(m.attentionTo ?? '') },
-    { label: 'שם המתקן', value: m.siteName },
-    { label: 'מיקום המתקן', value: m.address },
-    { label: 'פרויקט', value: m.project },
-    { label: 'תאריך הבדיקה', value: m.date },
-    { label: 'תאריך הפקת הדוח', value: String(m.issueDate ?? '') },
-    { label: 'תיאור המתקן/העבודה', value: m.description },
-    { label: 'מכשירי בדיקה', value: [instruments, String(m.testInstrumentsOther ?? '')].filter(Boolean).join(', ') },
-  ].filter((r) => r.value);
-  return { id: 'facility', zone: 'facility', title: 'פרטי המתקן', icon: '🏭', blocks: [{ kind: 'fields', rows }] };
+  const c = opts.company ?? EMPTY_PROFILE;
+  const today = opts.today ?? new Date();
+  const todayIL = `${today.getDate()}.${today.getMonth() + 1}.${today.getFullYear()}`;
+  const rows: Array<[string, string]> = [
+    ['מזמין הבדיקה', m.client],
+    ['לידי (איש קשר)', String(m.attentionTo ?? '')],
+    ['שם המתקן', m.siteName],
+    ['מיקום המתקן', m.address],
+    ['תאריך הבדיקה', formatDateIL(m.date)],
+    ['תאריך הפקת הדוח', m.issueDate ? formatDateIL(String(m.issueDate)) : todayIL],
+    ['מבצע הבדיקה', [c.engineerName, c.licenseType].filter(Boolean).join(' — ')],
+    ['מספר רישיון בודק', c.testerLicenseNo],
+    ['מספר רישיון מהנדס', c.engineerLicenseNo],
+    ['תיאור המתקן/העבודה', m.description],
+    ['מכשירי בדיקה', instrumentsCoverText(data, opts.equipment ?? [])],
+  ];
+  const el = electricianBlock(data, c.hideElectricianDeclaration);
+  return {
+    title,
+    reportNumber: m.reportNumber,
+    rows: rows.filter(([, v]) => v).map(([label, value]) => ({ label, value })),
+    electrician: el ? { text: el.text, name: el.name, licenseType: el.licenseType, licenseNo: el.licenseNo, date: formatDateIL(el.date) } : null,
+    inspectorName: c.engineerName,
+  };
+}
+
+function footerText(c: CompanyProfile | undefined): string {
+  if (!c) return '';
+  return [c.companyName, c.engineerName, c.phone, c.officePhone, c.email, c.companyAddress].filter(Boolean).join(' • ');
+}
+
+function licenseSection(c: CompanyProfile | undefined): DocumentSection | null {
+  if (!c?.attachLicenseToReports) return null;
+  const caption = [c.engineerName, c.engineerLicenseNo && `רישיון מס' ${c.engineerLicenseNo}`].filter(Boolean).join(' · ');
+  return { id: 'inspector-license', zone: 'appendix', title: 'צילום רישיון בודק', icon: '🪪', pageBreakBefore: true, blocks: [{ kind: 'image', imageKey: 'inspectorLicense', caption }] };
 }
 
 function findingsSection(findings: Finding[]): DocumentSection | null {
@@ -140,35 +176,44 @@ export function buildReportDocument<T extends object>(
   service: ReportTypeService<T>,
   data: ReportData,
   lastUpdatedAt: string | null,
+  opts: DocumentOptions = {},
 ): ReportDocument {
   const typeData = readTypeData(service, data);
   const def = service.definition;
   const isOfficial = def.documentKind === 'official-form';
+  const title = dynamicReportTitle(def.code, data.settings.inverterBrand as string | undefined);
   // שירות רשאי להחזיר content או summary. כל אזור אחר מוחזר ל-content — הערות/הצהרה/חתימה תמיד בסוף.
   const own = service.buildSections(typeData, data).map((s) =>
     s.zone === 'content' || s.zone === 'summary' ? s : { ...s, zone: 'content' as const },
   );
-  // מודולים משותפים (תוכן — תמיד לפני הסיכום)
-  const shared = relaysApply(def.code) ? [relaysSection(data)].filter((s): s is DocumentSection => !!s) : [];
-  const findings = [...service.findings(typeData), ...(relaysApply(def.code) ? relayFindings(data) : [])];
+  const present = (xs: Array<DocumentSection | null>) => xs.filter((s): s is DocumentSection => !!s);
+  // מודולים משותפים
+  const relays = relaysApply(def.code);
+  const findings = [...service.findings(typeData), ...(relays ? relayFindings(data) : [])];
   const sections: DocumentSection[] = isOfficial
     ? own // טופס רשמי: המבנה כולו מוגדר בשירות, בלי סעיפי החברה
     : [
-        facilitySection(data),
+        // "פרטי המתקן" מוצגים בעמוד השער (כמו בישן) — לא כסעיף נפרד
         ...own,
-        ...shared,
-        ...[service.showFindingsTable ? findingsSection(findings) : null, notesSection(data)]
-          .filter((s): s is DocumentSection => !!s),
+        ...present([relays ? relaysSection(data) : null]),
+        ...present([
+          service.showFindingsTable ? findingsSection(findings) : null,
+          approvalApplies(def.code) ? approvalSection(data) : null,
+          notesSection(data),
+        ]),
         declarationSection(data),
         { id: 'signature', zone: 'signature', title: 'חתימה', icon: '🖊️', blocks: [] },
+        ...present([photosSection(data), licenseSection(opts.company)]),
       ];
   return {
     typeCode: def.code,
-    title: dynamicReportTitle(def.code, data.settings.inverterBrand as string | undefined),
+    title,
     reportNumber: data.meta.reportNumber,
     inspectionDate: data.meta.date,
     lastUpdatedAt,
     documentKind: def.documentKind,
+    cover: isOfficial ? null : buildCover(title, data, opts),
+    footerText: isOfficial ? '' : footerText(opts.company),
     sections: orderSections(sections),
   };
 }

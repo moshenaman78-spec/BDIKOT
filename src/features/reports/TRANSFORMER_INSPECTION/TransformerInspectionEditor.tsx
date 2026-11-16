@@ -11,6 +11,9 @@ import {
   BigCheckbox, Card, ChoiceChips, ComboField, FacilityCard, Field, Grid2, RoundButton, SubHead, TextAreaField, type Choice,
 } from '@/components/report-template';
 import { ProtectionRelaysEditor } from '@/components/protection-relays';
+import { ApprovalEditor, ElectricianDeclarationEditor, PhotosEditor, TestInstrumentsPicker } from '@/components/shared-sections';
+import type { PhotoResolver } from '@/components/report-template/ReportDocumentView';
+import type { Equipment } from '@/services/shared/testInstruments';
 import { readTypeData, writeTypeData } from '@/services/reports/ReportTypeService';
 import { relayFindings } from '@/services/shared/protectionRelays';
 import {
@@ -31,8 +34,18 @@ const CONCLUSION_CHOICES: readonly Choice[] = [
 
 type Mutate = (fn: (draft: ReportData) => void) => void;
 
-export function TransformerInspectionEditor({ data, mutate, confirm = (m) => window.confirm(m), notify = (m) => window.alert(m) }: {
-  data: ReportData; mutate: Mutate; confirm?: (msg: string) => boolean; notify?: (msg: string) => void;
+export interface SharedEditorProps {
+  equipment: Equipment[] | null;
+  electricianHiddenGlobally: boolean;
+  onAddPhotos: (files: File[]) => void;
+  resolvePhoto: PhotoResolver;
+  photosBusy?: boolean;
+}
+
+const NO_SHARED: SharedEditorProps = { equipment: null, electricianHiddenGlobally: false, onAddPhotos: () => {}, resolvePhoto: () => undefined };
+
+export function TransformerInspectionEditor({ data, mutate, shared = NO_SHARED, confirm = (m) => window.confirm(m), notify = (m) => window.alert(m) }: {
+  data: ReportData; mutate: Mutate; shared?: SharedEditorProps; confirm?: (msg: string) => boolean; notify?: (msg: string) => void;
 }) {
   const ti = readTypeData(svc, data);
   const updTi = (fn: (d: TransformerInspectionReport) => TransformerInspectionReport | void) =>
@@ -59,6 +72,7 @@ export function TransformerInspectionEditor({ data, mutate, confirm = (m) => win
           <Field label="תאריך הפקת הדוח" type="date" value={meta('issueDate')} onChange={setMeta('issueDate')} />
         </Grid2>
         <TextAreaField label="תיאור המתקן/העבודה" value={meta('description')} onChange={setMeta('description')} rows={2} />
+        <TestInstrumentsPicker data={data} mutate={mutate} equipment={shared.equipment} />
         <p className="sh-dim">מספר דוח: <b>{data.meta.reportNumber || '—'}</b> (נקבע ביצירה ולא משתנה)</p>
       </Card>
 
@@ -77,6 +91,8 @@ export function TransformerInspectionEditor({ data, mutate, confirm = (m) => win
       </Card>
 
       <ProtectionRelaysEditor data={data} mutate={mutate} confirm={confirm} />
+
+      <PhotosEditor data={data} mutate={mutate} onAddFiles={shared.onAddPhotos} resolvePhoto={shared.resolvePhoto} busy={shared.photosBusy} confirm={confirm} />
 
       <Card title="ממצאים מסכמים" icon="📋">
         {ti.summaryItems.map((s, i) => (
@@ -103,6 +119,8 @@ export function TransformerInspectionEditor({ data, mutate, confirm = (m) => win
         <TextAreaField label="הרחבה / הערות נוספות (אופציונלי)" value={ti.conclusion.freeText} onChange={(v) => updTi((d) => { d.conclusion.freeText = v; })} />
       </Card>
 
+      <ApprovalEditor data={data} mutate={mutate} />
+
       <Card title="הערות" icon="📝">
         {notes.map((n, i) => (
           <div className="sh-numbered" key={i}>
@@ -118,9 +136,12 @@ export function TransformerInspectionEditor({ data, mutate, confirm = (m) => win
         </div>
       </Card>
 
-      <Card title="הערות בודק (קבועות)" icon="✍️">
+      <Card title="הצהרות לסוף הדוח" icon="✍️">
+        <SubHead>הערות בודק (קבועות, מודפסות תמיד)</SubHead>
         <ol className="sh-notes">{FIXED_DECLARATIONS.map((d) => <li key={d}>{d}</li>)}</ol>
         <TextAreaField label="הצהרה נוספת (אופציונלי)" value={String(data.customDeclaration ?? '')} onChange={(v) => mutate((d) => { d.customDeclaration = v; })} rows={2} />
+        <SubHead>הצהרת החשמלאי המבצע</SubHead>
+        <ElectricianDeclarationEditor data={data} mutate={mutate} hiddenGlobally={shared.electricianHiddenGlobally} />
       </Card>
     </div>
   );

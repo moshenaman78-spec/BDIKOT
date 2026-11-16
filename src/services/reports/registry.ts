@@ -5,7 +5,8 @@
 import type { ReportData, ReportDocument } from '@/core/reportModel';
 import { reportTypeFromHebrewName, type ReportTypeCode } from '@/core/reportTypes';
 import { relaysApply, validateRelays } from '@/services/shared/protectionRelays';
-import { buildReportDocument, readTypeData, type ReportTypeService, type ValidationIssue } from './ReportTypeService';
+import { buildReportDocument, readTypeData, type DocumentOptions, type ReportTypeService, type ValidationIssue } from './ReportTypeService';
+import { validateInstruments } from '@/services/shared/testInstruments';
 import { dcCableService } from './types/dcCable.service';
 import { evcsService } from './types/evcs.service';
 import { evDcService } from './types/evDc.service';
@@ -59,11 +60,20 @@ export function serviceForData(data: ReportData): AnyService {
   return serviceFor(reportTypeFromHebrewName(data.settings.formTypeName));
 }
 
-export function validateReport(data: ReportData): ValidationIssue[] {
+export function validateReport(data: ReportData, opts: DocumentOptions = {}): ValidationIssue[] {
   const svc = serviceForData(data);
-  return [...svc.validate(readTypeData(svc, data), data), ...(relaysApply(svc.code) ? validateRelays(data) : [])];
+  return [
+    ...svc.validate(readTypeData(svc, data), data),
+    ...(relaysApply(svc.code) ? validateRelays(data) : []),
+    // מכשירי בדיקה ותוקף כיול — רק כשנטענה רשימת המכשירים (אחרת אין על מה לבדוק)
+    ...(opts.equipment && svc.definition.documentKind === 'company-letterhead' ? validateInstruments(data, opts.equipment, opts.today) : []),
+  ];
 }
 
-export function renderReportDocument(data: ReportData, lastUpdatedAt: string | null = data.settings.cloudKnownUpdatedAt): ReportDocument {
-  return buildReportDocument(serviceForData(data), data, lastUpdatedAt);
+export function renderReportDocument(
+  data: ReportData,
+  lastUpdatedAt: string | null = data.settings.cloudKnownUpdatedAt,
+  opts: DocumentOptions = {},
+): ReportDocument {
+  return buildReportDocument(serviceForData(data), data, lastUpdatedAt, opts);
 }

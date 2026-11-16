@@ -4,11 +4,19 @@
  * בחירת דוח (טיוטות שנאי בענן / דוח חדש מפורש / הדגמה מקומית) → עורך + תצוגה מקדימה/הדפסה,
  * שמירה לפי כללי השמירה וחלונית קונפליקט.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { emptyMeta, emptySettings, type ReportData } from '@/core/reportModel';
 import { REPORT_TYPES } from '@/core/reportTypes';
-import { Card, ConflictDialog, ReportDocumentView, SaveBar } from '@/components/report-template';
-import { EMPTY_COMPANY, loadCompanySettings, type CompanySettings } from '@/services/companySettingsService';
+import { Card, ConflictDialog, ReportDocumentView, SaveBar, waitForImages } from '@/components/report-template';
+import {
+  EMPTY_IMAGES, EMPTY_PROFILE, imagesFromReport, loadCompanyImages, loadCompanyProfile, profileWithReportFallback,
+  type CompanyImages, type CompanyProfile,
+} from '@/services/companySettingsService';
+import {
+  canUploadNow, compressImage, createSignedUrlCache, supabasePhotoStorage, uploadPendingPhotos, uploadPhoto,
+} from '@/services/photoUpload';
+import { makePhotoEntry, markUploaded, readPhotos, writePhotos } from '@/services/shared/photos';
+import { loadEquipment, type Equipment } from '@/services/shared/testInstruments';
 import { createNewReport, loadReport, type SyncDeps } from '@/services/reportSyncService';
 import { renderReportDocument, validateReport, writeTypeData } from '@/services/reports';
 import type { DraftListItem } from '@/services/sync/reportStore';
@@ -31,13 +39,27 @@ function demoReport(): ReportData {
   return data;
 }
 
+/** הגדרות חברה, תמונות וציוד — נטענים פעם אחת מהענן, קריאה בלבד. */
+export interface CompanyContext { profile: CompanyProfile; images: CompanyImages; equipment: Equipment[] | null; error: string }
+
+const EMPTY_CTX: CompanyContext = { profile: EMPTY_PROFILE, images: EMPTY_IMAGES, equipment: null, error: '' };
+
 export function TransformerInspectionScreen() {
   const { cloud, deps } = useCloud();
   const [opened, setOpened] = useState<ReportData | null>(null);
-  const [company, setCompany] = useState<CompanySettings>(EMPTY_COMPANY);
+  const [company, setCompany] = useState<CompanyContext>(EMPTY_CTX);
 
   useEffect(() => {
-    if (cloud.status === 'ready') loadCompanySettings().then(setCompany).catch(() => {});
+    if (cloud.status !== 'ready') return;
+    (async () => {
+      try {
+        const profile = await loadCompanyProfile();
+        const [images, equipment] = await Promise.all([loadCompanyImages(profile).catch(() => EMPTY_IMAGES), loadEquipment().catch(() => null)]);
+        setCompany({ profile, images, equipment, error: '' });
+      } catch (e) {
+        setCompany({ ...EMPTY_CTX, error: 'לא ניתן לטעון את הגדרות החברה: ' + (e instanceof Error ? e.message : String(e)) });
+      }
+    })();
   }, [cloud.status]);
 
   if (!opened) {
@@ -125,12 +147,78 @@ function ReportPicker({ cloudStatus, cloudReason, deps, onOpen }: {
   );
 }
 
-function EditorView({ initial, deps, company, onClose }: { initial: ReportData; deps: SyncDeps | null; company: CompanySettings; onClose: () => void }) {
-  const ed = useReportEditor(initial, deps);
+function EditorView({ initial, deps, company, onClose }: { initial: ReportData; deps: SyncDeps | null; company: CompanyContext; onClose: () => void }) {
+  const storage = supabasePhotoStorage;
+  const uploadPendingRef = useRef<() => void>(() => {});
+  const ed = useReportEditor(initial, deps, { onSaved: (o) => { if (o.kind === 'saved') uploadPendingRef.current(); } });
   const [preview, setPreview] = useState(false);
+  const [photosBusy, setPhotosBusy] = useState(false);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+  const cache = useMemo(() => createSignedUrlCache(storage), [storage]);
   const isDemo = !initial.settings.cloudReportId;
-  const issues = useMemo(() => validateReport(ed.data), [ed.data]);
-  const doc = useMemo(() => (preview ? renderReportDocument(ed.data) : null), [preview, ed.data]);
+
+  // הגדרות חברה: מהענן, ושדה ריק נופל לעותק שבדוח עצמו (report_data.settings)
+  const profile = useMemo(() => profileWithReportFallback(company.profile, ed.data.settings), [company.profile, ed.data.settings]);
+  const images = useMemo<CompanyImages>(() => {
+    const fromReport = imagesFromReport(ed.data.settings);
+    return {
+      logo: company.images.logo || fromReport.logo, signature: company.images.signature || fromReport.signature,
+      footerLogo: company.images.footerLogo || fromReport.footerLogo, inspectorLicense: company.images.inspectorLicense || fromReport.inspectorLicense,
+    };
+  }, [company.images, ed.data.settings]);
+  const docOpts = useMemo(() => ({ company: profile, equipment: company.equipment ?? undefined }), [profile, company.equipment]);
+  const issues = useMemo(() => validateReport(ed.data, docOpts), [ed.data, docOpts]);
+  const doc = useMemo(() => (preview ? renderReportDocument(ed.data, ed.data.settings.cloudKnownUpdatedAt, docOpts) : null), [preview, ed.data, docOpts]);
+
+  // תמונות ענן בלי עותק מקומי — קישור חתום (קריאה בלבד)
+  const cloudOnly = readPhotos(ed.data).filter((p) => p.cloudPath && !p.dataUrl && !urls[p.cloudPath]).map((p) => p.cloudPath);
+  const cloudKey = cloudOnly.join('|');
+  useEffect(() => {
+    if (!deps || !cloudKey) return;
+    let alive = true;
+    Promise.all(cloudKey.split('|').map(async (path) => [path, await cache.get(path)] as const)).then((pairs) => {
+      if (!alive) return;
+      setUrls((u) => { const n = { ...u }; for (const [path, url] of pairs) if (url) n[path] = url; return n; });
+    });
+    return () => { alive = false; };
+  }, [deps, cloudKey, cache]);
+  const resolvePhoto = useCallback((path: string) => urls[path] ?? cache.peek(path), [urls, cache]);
+
+  const applyUploads = useCallback((done: Array<{ id: string; cloudPath: string }>) => {
+    if (!done.length) return;
+    ed.mutate((d) => { let list = readPhotos(d); for (const u of done) list = markUploaded(list, u.id, u.cloudPath); writePhotos(d, list); });
+  }, [ed]);
+
+  // אחרי יצירת הדוח בענן (או בפתיחה) — מעלים תמונות שממתינות
+  uploadPendingRef.current = () => { void uploadPendingPhotos(storage, ed.getData()).then(applyUploads); };
+  useEffect(() => { if (deps) uploadPendingRef.current(); }, [deps]);
+
+  const addPhotos = useCallback(async (files: File[]) => {
+    setPhotosBusy(true);
+    try {
+      for (const file of files) {
+        let dataUrl: string;
+        try { dataUrl = await compressImage(file); } catch { ed.setToast(`לא ניתן לקרוא את התמונה ${file.name}`); continue; }
+        const entry = makePhotoEntry(dataUrl, file.name, file.type);
+        const cur = ed.getData();
+        const uploadNow = !!deps && canUploadNow(cur);
+        if (deps && !uploadNow) entry.pendingUpload = true; // תועלה אחרי שהדוח ייווצר בענן
+        ed.mutate((d) => writePhotos(d, [...readPhotos(d), entry]));
+        if (uploadNow) {
+          uploadPhoto(storage, cur.settings.cloudReportId!, dataUrl, file.name)
+            .then((cloudPath) => applyUploads([{ id: entry.id, cloudPath }]))
+            .catch((e) => ed.setToast('העלאת התמונה נכשלה (נשמרה במכשיר): ' + (e instanceof Error ? e.message : String(e))));
+        }
+      }
+    } finally {
+      setPhotosBusy(false);
+    }
+  }, [deps, ed, storage, applyUploads]);
+
+  const print = useCallback(async () => {
+    await waitForImages();
+    window.print();
+  }, []);
 
   const close = useCallback(() => {
     if (ed.dirty && !isDemo && !window.confirm('יש שינויים שעוד לא נשמרו בענן (הם שמורים מקומית במכשיר). לחזור לרשימה?')) return;
@@ -142,6 +230,7 @@ function EditorView({ initial, deps, company, onClose }: { initial: ReportData; 
       <div className="sh-actions sh-no-print" style={{ margin: '12px 0' }}>
         <button type="button" className="sh-btn" onClick={close}>→ חזרה לרשימה</button>
         {isDemo ? <span className="sh-skeleton-note">מצב הדגמה — לא נשמר בענן</span> : null}
+        {company.error ? <span className="sh-skeleton-note" role="alert">{company.error}</span> : null}
       </div>
 
       {issues.length ? (
@@ -155,8 +244,15 @@ function EditorView({ initial, deps, company, onClose }: { initial: ReportData; 
       ) : null}
 
       {preview && doc
-        ? <ReportDocumentView doc={doc} company={company} />
-        : <div className="sh-no-print"><TransformerInspectionEditor data={ed.data} mutate={ed.mutate} /></div>}
+        ? <ReportDocumentView doc={doc} images={images} resolvePhoto={resolvePhoto} />
+        : (
+          <div className="sh-no-print">
+            <TransformerInspectionEditor
+              data={ed.data} mutate={ed.mutate}
+              shared={{ equipment: company.equipment, electricianHiddenGlobally: profile.hideElectricianDeclaration, onAddPhotos: (f) => { void addPhotos(f); }, resolvePhoto, photosBusy }}
+            />
+          </div>
+        )}
 
       <SaveBar
         status={isDemo ? 'הדגמה מקומית' : ed.statusText}
@@ -166,7 +262,7 @@ function EditorView({ initial, deps, company, onClose }: { initial: ReportData; 
         previewOn={preview}
         onSave={() => { void ed.save(); }}
         onTogglePreview={() => setPreview(!preview)}
-        onPrint={() => window.print()}
+        onPrint={() => { void print(); }}
       />
       {ed.conflict ? <ConflictDialog deleted={ed.conflict.deleted} diff={ed.conflict.diff} busy={ed.conflict.busy} onAction={(a) => { void ed.resolveConflict(a); }} /> : null}
       {ed.toast ? <div className="sh-toast" role="status">{ed.toast}</div> : null}

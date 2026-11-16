@@ -6,7 +6,6 @@ import { useMemo, useState } from 'react';
 import { emptyMeta, emptySettings, type ReportData } from '@/core/reportModel';
 import { PICKER_ORDER, REPORT_CATEGORIES, REPORT_TYPES, typesInCategory, type ReportTypeCode } from '@/core/reportTypes';
 import { Card, ReportDocumentView, SelectField } from '@/components/report-template';
-import { EMPTY_COMPANY } from '@/services/companySettingsService';
 import { renderReportDocument, serviceFor, validateReport, writeTypeData } from '@/services/reports';
 
 function sampleReport(code: ReportTypeCode): ReportData {
@@ -43,7 +42,7 @@ export function ReportPreviewScreen() {
           <button type="button" className="sh-tab" style={{ color: 'var(--sh-navy)', borderColor: 'var(--sh-sky)' }} onClick={() => window.print()}>🖨️ הדפסה / PDF</button>
         </Card>
       </div>
-      <ReportDocumentView doc={doc} company={EMPTY_COMPANY} />
+      <ReportDocumentView doc={doc} />
     </div>
   );
 }

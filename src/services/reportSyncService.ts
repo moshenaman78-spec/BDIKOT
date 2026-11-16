@@ -65,6 +65,8 @@ export async function createNewReport(
     settings,
     notes: [''], // כמו newState() בישן
     customDeclaration: '',
+    showElectricianDeclaration: true,
+    approvalStatus: '',
   };
   const svc = serviceFor(code);
   writeTypeData(svc, data, svc.createEmpty());
