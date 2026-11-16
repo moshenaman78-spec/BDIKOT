@@ -128,6 +128,11 @@ export function diffReportData(local: unknown, cloud: unknown, path = '', out: F
   if (DIFF_IGNORED.has(path)) return out;
   const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
   if (isObj(local) && isObj(cloud)) {
+    // פריט אחר באותו מקום ברשימה (שנאי/ממסר/תמונה שהוחלפו או סודרו מחדש) — שינוי אחד, לא שדה-שדה
+    if (typeof local.id === 'string' && typeof cloud.id === 'string' && local.id !== cloud.id) {
+      out.push({ path, local, cloud });
+      return out;
+    }
     const keys = new Set([...Object.keys(local), ...Object.keys(cloud)]);
     for (const k of keys) diffReportData(local[k], cloud[k], path ? `${path}.${k}` : k, out);
     return out;

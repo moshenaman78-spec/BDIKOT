@@ -62,7 +62,7 @@ export function TransformerInspectionEditor({ data, mutate, shared = NO_SHARED, 
 
   return (
     <div className="sh-editor">
-      <Card title="01 · פרטי המתקן" icon="🏭">
+      <Card title="פרטי המתקן (עמוד השער)" icon="🏭">
         <Grid2>
           <Field label="מזמין הבדיקה" value={meta('client')} onChange={setMeta('client')} />
           <Field label="לידי (איש קשר)" value={meta('attentionTo')} onChange={setMeta('attentionTo')} />
@@ -76,7 +76,7 @@ export function TransformerInspectionEditor({ data, mutate, shared = NO_SHARED, 
         <p className="sh-dim">מספר דוח: <b>{data.meta.reportNumber || '—'}</b> (נקבע ביצירה ולא משתנה)</p>
       </Card>
 
-      <Card title="02 · שנאים" icon="🔋" actions={<RoundButton kind="add" label="הוסף שנאי" onClick={() => updTi(addTransformer)} />}>
+      <Card title="שנאים" icon="🔋" actions={<RoundButton kind="add" label="הוסף שנאי" onClick={() => updTi(addTransformer)} />}>
         {ti.transformers.map((t, i) => (
           <TransformerCard
             key={t.id} t={t} index={i}

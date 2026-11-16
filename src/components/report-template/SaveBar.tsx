@@ -12,9 +12,11 @@ export function SaveBar({ status, lastSavedAt, canSave, saving, previewOn, onSav
       <span className="sh-savebar__status" role="status">
         {status}{lastSavedAt ? ` · עודכן לאחרונה ${formatLastUpdated(lastSavedAt)}` : ''}
       </span>
-      <button type="button" className="sh-btn" onClick={onTogglePreview}>{previewOn ? '✏️ עריכה' : '👁️ תצוגה מקדימה'}</button>
-      {previewOn ? <button type="button" className="sh-btn" onClick={onPrint}>🖨️ הדפסה / PDF</button> : null}
-      <button type="button" className="sh-btn sh-btn--primary" disabled={!canSave || saving} onClick={onSave}>{saving ? 'שומר…' : '💾 שמור'}</button>
+      <div className="sh-savebar__btns">
+        <button type="button" className="sh-btn" onClick={onTogglePreview}>{previewOn ? '✏️ עריכה' : <>👁️ <span className="sh-hide-xs">תצוגה </span>מקדימה</>}</button>
+        <button type="button" className="sh-btn" onClick={onPrint}>🖨️ <span className="sh-hide-xs">הדפסה / </span>PDF</button>
+        <button type="button" className="sh-btn sh-btn--primary" disabled={!canSave || saving} onClick={onSave}>{saving ? 'שומר…' : '💾 שמור'}</button>
+      </div>
     </footer>
   );
 }

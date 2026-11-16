@@ -3,6 +3,7 @@
  * טופס רשמי: PDF עצמאי בלי הלוגו והפוטר של החברה (documentKind = 'official-form').
  * מבנה הנתונים הועתק מ-makeFireForm3 / makeF3Panel באפליקציה הישנה (v2.2.525).
  */
+import { localIsoDate } from '@/services/sync/editorRules';
 import type { DocumentSection } from '@/core/reportModel';
 import { defineReportService, mergeDefaults } from '../ReportTypeService';
 import { fieldsBlock } from '../helpers';
@@ -49,7 +50,7 @@ export const fireForm3Service = defineReportService<FireForm3Data>('FIRE_FORM3',
   normalize: (raw) => {
     const f = mergeDefaults(createEmpty(), raw);
     if (!f.panels.length) f.panels = [makeF3Panel()];
-    if (!f.reportDate) f.reportDate = new Date().toISOString().slice(0, 10);
+    if (!f.reportDate) f.reportDate = localIsoDate();
     return f;
   },
   validate: (f) => {

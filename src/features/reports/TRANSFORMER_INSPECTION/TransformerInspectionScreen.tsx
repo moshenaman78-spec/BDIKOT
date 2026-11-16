@@ -4,6 +4,7 @@
  * בחירת דוח (טיוטות שנאי בענן / דוח חדש מפורש / הדגמה מקומית) → עורך + תצוגה מקדימה/הדפסה,
  * שמירה לפי כללי השמירה וחלונית קונפליקט.
  */
+import { localIsoDate } from '@/services/sync/editorRules';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { emptyMeta, emptySettings, type ReportData } from '@/core/reportModel';
 import { REPORT_TYPES } from '@/core/reportTypes';
@@ -23,14 +24,14 @@ import type { DraftListItem } from '@/services/sync/reportStore';
 import { transformerInspectionService } from '@/services/reports/types/transformerInspection.service';
 import { formatLastUpdated } from '@/core/reportModel';
 import { useCloud } from '@/features/report-editor/useCloud';
-import { readBackup, useReportEditor } from '@/features/report-editor/useReportEditor';
+import { isDirty, readBackup, useReportEditor } from '@/features/report-editor/useReportEditor';
 import { TransformerInspectionEditor } from './TransformerInspectionEditor';
 
 const CODE = 'TRANSFORMER_INSPECTION' as const;
 
 function demoReport(): ReportData {
   const data: ReportData = {
-    meta: { ...emptyMeta(), reportNumber: 'TR-הדגמה', date: new Date().toISOString().slice(0, 10) },
+    meta: { ...emptyMeta(), reportNumber: 'TR-הדגמה', date: localIsoDate() },
     settings: emptySettings(REPORT_TYPES[CODE].nameHe),
     notes: [''],
     customDeclaration: '',
@@ -83,6 +84,9 @@ function ReportPicker({ cloudStatus, cloudReason, deps, onOpen }: {
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, [deps]);
 
+  // אילו טיוטות יש להן במכשיר הזה שינויים שלא נשמרו — פעם אחת לטעינה, לא בכל רינדור
+  const localDirty = useMemo(() => new Set((drafts ?? []).filter((d) => { const b = readBackup(d.id); return !!b && isDirty(b); }).map((d) => d.id)), [drafts]);
+
   const filtered = useMemo(() => {
     const q = query.trim();
     return (drafts ?? []).filter((d) => !q || [d.report_number, d.report_title, d.client_name, d.project_name].some((v) => v?.includes(q)));
@@ -94,10 +98,11 @@ function ReportPicker({ cloudStatus, cloudReason, deps, onOpen }: {
     try {
       const loaded = await loadReport(deps.store, id);
       if (!loaded) { setError('הדוח לא נמצא בענן'); return; }
-      // גיבוי מקומי משתמשים בו רק אם הוא מבוסס על אותה גרסת ענן בדיוק ויש בו שינויים — אחרת לא נוגעים
+      // גיבוי מקומי עם שינויים שלא הגיעו לענן — נפתח הוא (לא נזרק בשקט). אם בענן כבר יש גרסה
+      // חדשה יותר, בדיקת העדכניות בעורך תפתח מיד חלונית קונפליקט (השוואה / עותק / טעינת ענן).
       const backup = readBackup(id);
-      const usable = backup && backup.settings.cloudKnownUpdatedAt === loaded.row.updated_at
-        && (backup.settings.cloudEditSeq || 0) > (backup.settings.cloudSyncedSeq || 0);
+      const usable = backup && isDirty(backup) && backup.settings.cloudReportId === id;
+      if (usable) setError('');
       onOpen(usable ? backup! : loaded.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -132,8 +137,11 @@ function ReportPicker({ cloudStatus, cloudReason, deps, onOpen }: {
               {filtered.map((d) => (
                 <li key={d.id}>
                   <span>
-                    <b>{d.report_number || '—'}</b> · {d.report_title || d.client_name || 'ללא שם'}
-                    <br /><span className="sh-dim">עודכן {formatLastUpdated(d.updated_at)}</span>
+                    <b>{d.report_number || '—'}</b> · {[d.report_title, d.client_name].filter(Boolean).join(' · ') || 'ללא שם'}
+                    <br /><span className="sh-dim">עודכן {formatLastUpdated(d.updated_at)}
+                      {d.saved_by_device && d.saved_by_device !== deps.deviceId ? ' · 👥 נשמר לאחרונה במכשיר אחר' : ''}
+                      {localDirty.has(d.id) ? ' · 💾 יש במכשיר הזה שינויים שלא נשמרו' : ''}
+                    </span>
                   </span>
                   <button type="button" className="sh-btn" disabled={busy} onClick={() => open(d.id)}>פתח</button>
                 </li>
@@ -168,7 +176,8 @@ function EditorView({ initial, deps, company, onClose }: { initial: ReportData; 
   }, [company.images, ed.data.settings]);
   const docOpts = useMemo(() => ({ company: profile, equipment: company.equipment ?? undefined }), [profile, company.equipment]);
   const issues = useMemo(() => validateReport(ed.data, docOpts), [ed.data, docOpts]);
-  const doc = useMemo(() => (preview ? renderReportDocument(ed.data, ed.data.settings.cloudKnownUpdatedAt, docOpts) : null), [preview, ed.data, docOpts]);
+  // המסמך תמיד מוכן — גם הדפסה מתוך מצב עריכה (Ctrl+P) מדפיסה את הדוח ולא דף ריק
+  const doc = useMemo(() => renderReportDocument(ed.data, ed.data.settings.cloudKnownUpdatedAt, docOpts), [ed.data, docOpts]);
 
   // תמונות ענן בלי עותק מקומי — קישור חתום (קריאה בלבד)
   const cloudOnly = readPhotos(ed.data).filter((p) => p.cloudPath && !p.dataUrl && !urls[p.cloudPath]).map((p) => p.cloudPath);
@@ -189,8 +198,10 @@ function EditorView({ initial, deps, company, onClose }: { initial: ReportData; 
     ed.mutate((d) => { let list = readPhotos(d); for (const u of done) list = markUploaded(list, u.id, u.cloudPath); writePhotos(d, list); });
   }, [ed]);
 
-  // אחרי יצירת הדוח בענן (או בפתיחה) — מעלים תמונות שממתינות
-  uploadPendingRef.current = () => { void uploadPendingPhotos(storage, ed.getData()).then(applyUploads); };
+  // אחרי יצירת הדוח בענן (או בפתיחה) — מעלים תמונות שממתינות. inFlight מונע העלאה כפולה של אותה
+  // תמונה כששתי שמירות רצות קרוב (אחרת: שני קבצים בדלי, ואחד מהם יתום).
+  const inFlight = useRef(new Set<string>());
+  uploadPendingRef.current = () => { void uploadPendingPhotos(storage, ed.getData(), inFlight.current).then(applyUploads); };
   useEffect(() => { if (deps) uploadPendingRef.current(); }, [deps]);
 
   const addPhotos = useCallback(async (files: File[]) => {
@@ -205,9 +216,15 @@ function EditorView({ initial, deps, company, onClose }: { initial: ReportData; 
         if (deps && !uploadNow) entry.pendingUpload = true; // תועלה אחרי שהדוח ייווצר בענן
         ed.mutate((d) => writePhotos(d, [...readPhotos(d), entry]));
         if (uploadNow) {
+          inFlight.current.add(entry.id);
           uploadPhoto(storage, cur.settings.cloudReportId!, dataUrl, file.name)
             .then((cloudPath) => applyUploads([{ id: entry.id, cloudPath }]))
-            .catch((e) => ed.setToast('העלאת התמונה נכשלה (נשמרה במכשיר): ' + (e instanceof Error ? e.message : String(e))));
+            .catch((e) => {
+              // נשמרת במכשיר ומסומנת לניסיון חוזר בשמירה הבאה (קודם: נשארה בלי העלאה לעולם)
+              ed.mutate((d) => writePhotos(d, readPhotos(d).map((p) => (p.id === entry.id ? { ...p, pendingUpload: true } : p))));
+              ed.setToast('העלאת התמונה נכשלה — נשמרה במכשיר ותועלה שוב בשמירה הבאה. ' + (e instanceof Error ? e.message : String(e)));
+            })
+            .finally(() => inFlight.current.delete(entry.id));
         }
       }
     } finally {
@@ -215,10 +232,12 @@ function EditorView({ initial, deps, company, onClose }: { initial: ReportData; 
     }
   }, [deps, ed, storage, applyUploads]);
 
+  const errorsCount = issues.filter((i) => i.severity === 'error').length;
   const print = useCallback(async () => {
+    if (errorsCount && !window.confirm(`יש ${errorsCount} שגיאות בבדיקות לפני הפקה (למשל מסקנה חסרה או כיול שפג). להדפיס בכל זאת?`)) return;
     await waitForImages();
     window.print();
-  }, []);
+  }, [errorsCount]);
 
   const close = useCallback(() => {
     if (ed.dirty && !isDemo && !window.confirm('יש שינויים שעוד לא נשמרו בענן (הם שמורים מקומית במכשיר). לחזור לרשימה?')) return;
@@ -233,17 +252,25 @@ function EditorView({ initial, deps, company, onClose }: { initial: ReportData; 
         {company.error ? <span className="sh-skeleton-note" role="alert">{company.error}</span> : null}
       </div>
 
-      {issues.length ? (
-        <div className="sh-no-print">
-          <Card title={`בדיקות לפני הפקה (${issues.length})`} icon="🔎">
-            <ul className="sh-issues">
-              {issues.map((i) => <li key={i.path + i.message} className={i.severity === 'error' ? 'is-error' : ''}>{i.severity === 'error' ? '⛔' : '⚠️'} {i.message}</li>)}
-            </ul>
-          </Card>
+      {ed.presence ? (
+        <div className="sh-banner sh-banner--warn sh-no-print sh-presence" role="status">
+          <span>👥 {ed.presence}</span>
+          <button type="button" className="sh-btn" onClick={ed.dismissPresence}>הבנתי</button>
         </div>
       ) : null}
 
-      {preview && doc
+      {issues.length ? (
+        <details className="sh-issues-box sh-no-print" open={errorsCount > 0}>
+          <summary>
+            🔎 בדיקות לפני הפקה: {errorsCount ? <b className="sh-text-bad">{errorsCount} שגיאות</b> : null}{errorsCount && issues.length - errorsCount ? ' · ' : ''}{issues.length - errorsCount ? `${issues.length - errorsCount} אזהרות` : ''}
+          </summary>
+          <ul className="sh-issues">
+            {issues.map((i) => <li key={i.path + i.message} className={i.severity === 'error' ? 'is-error' : ''}>{i.severity === 'error' ? '⛔' : '⚠️'} {i.message}</li>)}
+          </ul>
+        </details>
+      ) : null}
+
+      {preview
         ? <ReportDocumentView doc={doc} images={images} resolvePhoto={resolvePhoto} />
         : (
           <div className="sh-no-print">
@@ -253,6 +280,8 @@ function EditorView({ initial, deps, company, onClose }: { initial: ReportData; 
             />
           </div>
         )}
+      {/* בהדפסה מתוך מצב עריכה — זה מה שיודפס */}
+      {preview ? null : <div className="sh-print-only"><ReportDocumentView doc={doc} images={images} resolvePhoto={resolvePhoto} /></div>}
 
       <SaveBar
         status={isDemo ? 'הדגמה מקומית' : ed.statusText}

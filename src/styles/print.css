@@ -2,7 +2,8 @@
 @page{size:A4;margin:10mm 10mm 8mm}
 @media print{
   body{background:#fff}
-  .sh-header,.sh-tabs,.sh-no-print{display:none !important}
+  .sh-header,.sh-tabs,.sh-no-print,.sh-savebar,.sh-toast,.sh-modal{display:none !important}
+  .sh-print-only{display:block}
   .sh-container{max-width:none;padding:0}
   .sh-doc{box-shadow:none;margin:0;padding:0;max-width:none}
   .sh-sec__title{break-after:avoid}

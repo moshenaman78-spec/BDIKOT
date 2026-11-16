@@ -114,7 +114,7 @@ body{background:var(--sh-bg);color:var(--sh-text);font-family:var(--sh-font-ui);
 .sh-issues .is-error{color:var(--sh-bad);font-weight:600}
 .sh-list{list-style:none;margin:0;padding:0}
 .sh-list li{display:flex;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--sh-line);padding:8px 0}
-.sh-toast{position:fixed;bottom:72px;inset-inline:16px;max-width:520px;margin:0 auto;background:var(--sh-navy);color:#fff;padding:10px 14px;border-radius:10px;z-index:40;text-align:center}
+.sh-toast{position:fixed;bottom:calc(var(--sh-savebar-h, 72px) + 12px);inset-inline:16px;max-width:520px;margin:0 auto;background:var(--sh-navy);color:#fff;padding:10px 14px;border-radius:10px;z-index:40;text-align:center}
 .sh-modal{position:fixed;inset:0;background:rgba(15,46,77,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
 .sh-modal__inner{background:#fff;border-radius:var(--sh-radius-card);max-width:560px;width:100%;max-height:90vh;overflow:auto;padding:16px}
 .sh-modal__inner h3{margin:0 0 6px;color:var(--sh-navy)}
@@ -190,3 +190,29 @@ body{background:var(--sh-bg);color:var(--sh-text);font-family:var(--sh-font-ui);
 .sh-cover__bottom{display:grid;grid-template-columns:1fr 55mm;gap:12px;align-items:end}
 .sh-cover__bottom>.sh-cover__sig:only-child{grid-column:1 / -1}
 @media (max-width:600px){.sh-cover__bottom{grid-template-columns:1fr}}
+
+/* סקירה: מקום לסרגל השמירה (שתי שורות בטלפון), הודעות, השוואה, הדפסה מכל מצב */
+:root{--sh-savebar-h:64px}
+@media (max-width:600px){:root{--sh-savebar-h:92px}}
+.sh-container{padding-bottom:calc(var(--sh-savebar-h) + 32px)}
+.sh-print-only{display:none}
+.sh-presence{display:flex;gap:10px;align-items:center;justify-content:space-between;text-align:right;font-weight:600;margin:10px 0}
+.sh-issues-box{background:#fff;border:1.5px solid var(--sh-sky);border-radius:var(--sh-radius-card);padding:10px 14px;margin:10px 0}
+.sh-issues-box summary{cursor:pointer;font-weight:700;color:var(--sh-navy);min-height:32px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.sh-issues-box .sh-issues{margin-top:8px}
+.sh-diff{margin-top:10px}
+.sh-diff__title{font-weight:700;margin-bottom:6px}
+.sh-diff ul{list-style:none;margin:0;padding:0}
+.sh-diff li{border:1px solid var(--sh-line);border-radius:8px;padding:8px 10px;margin:6px 0;background:var(--sh-panel2)}
+.sh-diff__label{font-weight:700;color:var(--sh-navy);margin-bottom:4px;overflow-wrap:anywhere}
+.sh-diff__vals{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:.88rem;overflow-wrap:anywhere}
+@media (max-width:600px){.sh-diff__vals{grid-template-columns:1fr}}
+.sh-modal__inner{overflow-x:hidden}
+.sh-savebar__btns{display:flex;gap:8px}
+@media (max-width:600px){
+  .sh-savebar{padding:6px 10px;gap:4px}
+  .sh-savebar__status{flex-basis:100%;font-size:.78rem;line-height:1.3}
+  .sh-savebar__btns{flex-basis:100%}
+  .sh-savebar__btns .sh-btn{flex:1;padding:0 8px;min-height:44px;font-size:.92rem}
+  .sh-hide-xs{display:none}
+}

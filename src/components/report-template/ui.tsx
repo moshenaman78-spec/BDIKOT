@@ -1,7 +1,7 @@
 /**
  * components/report-template/ui.tsx — רכיבי UI משותפים של העיצוב החדש (עורך).
  */
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 export function AppHeader({ title, logoSrc, status, children }: { title: string; logoSrc?: string; status?: ReactNode; children?: ReactNode }) {
   return (
@@ -68,7 +68,7 @@ export function RoundButton({ kind, onClick, label }: { kind: keyof typeof ROUND
 }
 
 export function TextField({ label, value, onChange, type = 'text' }: { label: string; value: string; onChange: (v: string) => void; type?: string }) {
-  const id = `f-${label}`;
+  const id = useId();
   return (
     <div className="sh-field">
       <label htmlFor={id}>{label}</label>
@@ -78,7 +78,7 @@ export function TextField({ label, value, onChange, type = 'text' }: { label: st
 }
 
 export function SelectField({ label, value, options, onChange, placeholder = 'בחר…' }: { label: string; value: string; options: readonly string[]; onChange: (v: string) => void; placeholder?: string }) {
-  const id = `s-${label}`;
+  const id = useId();
   return (
     <div className="sh-field">
       <label htmlFor={id}>{label}</label>

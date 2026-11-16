@@ -80,12 +80,16 @@ export async function uploadPhoto(storage: PhotoStorage, reportId: string, dataU
 }
 
 /** מעלה את כל התמונות שממתינות. מחזיר [id, cloudPath] להצלחות; כישלון נשאר ממתין לניסיון הבא. */
-export async function uploadPendingPhotos(storage: PhotoStorage, data: ReportData): Promise<Array<{ id: string; cloudPath: string }>> {
+export async function uploadPendingPhotos(
+  storage: PhotoStorage, data: ReportData, inFlight: Set<string> = new Set(),
+): Promise<Array<{ id: string; cloudPath: string }>> {
   if (!canUploadNow(data)) return [];
   const reportId = data.settings.cloudReportId!;
   const done: Array<{ id: string; cloudPath: string }> = [];
-  for (const p of readPhotos(data).filter((x) => x.pendingUpload && x.dataUrl && !x.cloudPath)) {
+  for (const p of readPhotos(data).filter((x) => x.pendingUpload && x.dataUrl && !x.cloudPath && !inFlight.has(x.id))) {
+    inFlight.add(p.id);
     try { done.push({ id: p.id, cloudPath: await uploadPhoto(storage, reportId, p.dataUrl, p.fileName) }); } catch { /* ינוסה שוב */ }
+    finally { inFlight.delete(p.id); }
   }
   return done;
 }

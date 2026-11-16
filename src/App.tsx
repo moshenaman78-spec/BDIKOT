@@ -21,8 +21,15 @@ export function App() {
       </AppHeader>
       {tab === 'transformer' ? <TransformerInspectionScreen /> : tab === 'preview' ? <ReportPreviewScreen /> : (
         <div className="sh-container">
-          {/* TODO(foundation): המסכים התחברות / טיוטות / פרטים כלליים / קונפליקט נבנו ב-bdikot-react-foundation.zip — לשלב כאן. */}
-          <p className="sh-skeleton-note">🚧 המסך הזה נמצא בחבילת ה-foundation ויחובר כשתועלה לריפו.</p>
+          {/* TODO(foundation): המסכים התחברות / טיוטות / פרטים כלליים נבנו ב-bdikot-react-foundation.zip — לשלב כאן. */}
+          <section className="sh-card">
+            <div className="sh-card__head"><h2 className="sh-card__title">{TABS.find((t) => t.key === tab)?.label}</h2></div>
+            <div className="sh-card__body">
+              <p>המסך הזה עדיין לא הועבר לאפליקציה החדשה. בינתיים עובדים בו באפליקציה הקיימת — אותו חשבון ואותם נתונים.</p>
+              <p className="sh-dim">דוחות שנאי מתח גבוה כבר נערכים כאן (לשונית "שנאי מתח גבוה"), כולל הטיוטות שלהם.</p>
+              <a className="sh-btn sh-btn--primary" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} href="/">פתח את האפליקציה הקיימת ↗</a>
+            </div>
+          </section>
         </div>
       )}
     </>

@@ -4,6 +4,7 @@
  * כל פונקציה מחזירה תוצאה מפורשת (SaveOutcome) — ה-UI מחליט מה להציג (pill/toast/חלונית).
  * שום פונקציה כאן לא יוצרת דוח בשקט, לא דורסת, ולא מארכבת.
  */
+import { localIsoDate } from '@/services/sync/editorRules';
 import type { ReportData, ReportRow } from '@/core/reportModel';
 import { emptyMeta, emptySettings } from '@/core/reportModel';
 import { getReportType, reportTypeFromHebrewName, type ReportTypeCode } from '@/core/reportTypes';
@@ -61,7 +62,7 @@ export async function createNewReport(
   settings.cloudInsertPending = true;
   settings.cloudInsertRequiresContent = !!opts.requireContentBeforeInsert;
   const data: ReportData = {
-    meta: { ...emptyMeta(), reportNumber, date: new Date().toISOString().slice(0, 10) },
+    meta: { ...emptyMeta(), reportNumber, date: localIsoDate() },
     settings,
     notes: [''], // כמו newState() בישן
     customDeclaration: '',

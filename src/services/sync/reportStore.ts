@@ -40,7 +40,10 @@ export interface DraftListItem {
   updated_at: string;
   client_name: string | null;
   project_name: string | null;
+  /** 0 = דוח רגיל; >0 = דוח משולב (בפועל 1 — לא סופרים, רק מזהים). */
   chapter_count: number;
+  /** המכשיר ששמר אחרון (report_data.settings.savedByDevice). */
+  saved_by_device: string | null;
 }
 
 export interface ReportStore {
@@ -115,22 +118,24 @@ export const supabaseReportStore: ReportStore = {
   },
 
   async listDrafts() {
+    // לא מורידים את report_data המלא (כולל תמונות base64) לכל טיוטה — רק את מה שהרשימה צריכה
     const { data, error } = await getSupabase()
       .from(TABLES.reports)
-      .select('id, report_number, report_type, report_title, status, updated_at, report_data, clients(name), projects(name)')
+      .select('id, report_number, report_type, report_title, status, updated_at, chapter0:report_data->reportChapters->0->>id, saved_by_device:report_data->settings->>savedByDevice, meta_client:report_data->meta->>client, meta_site:report_data->meta->>siteName, clients(name), projects(name)')
       .eq('status', 'draft')
       .order('updated_at', { ascending: false });
     if (error) throw error;
     type Raw = {
       id: string; report_number: string | null; report_type: string | null; report_title: string | null; status: string;
-      updated_at: string; report_data: { reportChapters?: unknown[] } | null;
+      updated_at: string; chapter0: string | null; saved_by_device: string | null; meta_client: string | null; meta_site: string | null;
       clients: { name: string } | null; projects: { name: string } | null;
     };
     return ((data ?? []) as unknown as Raw[]).map((r) => ({
-      id: r.id, report_number: r.report_number, report_type: r.report_type, report_title: r.report_title,
+      id: r.id, report_number: r.report_number, report_type: r.report_type, report_title: r.report_title || r.meta_site || null,
       status: r.status, updated_at: r.updated_at,
-      client_name: r.clients?.name ?? null, project_name: r.projects?.name ?? null,
-      chapter_count: Array.isArray(r.report_data?.reportChapters) ? r.report_data!.reportChapters!.length : 0,
+      client_name: r.clients?.name ?? r.meta_client ?? null, project_name: r.projects?.name ?? null,
+      chapter_count: r.chapter0 ? 1 : 0,
+      saved_by_device: r.saved_by_device ?? null,
     }));
   },
 

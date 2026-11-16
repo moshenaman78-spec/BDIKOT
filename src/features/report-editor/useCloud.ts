@@ -28,8 +28,13 @@ export function useCloud(): { cloud: CloudState; deps: SyncDeps | null } {
   useEffect(() => {
     if (!cloudConfigured()) return;
     const sb = getSupabase();
+    // רענון טוקן (כל שעה) מחזיר אותו משתמש — לא מחליפים את האובייקט, כדי שהעורך לא "יתחיל מחדש"
     const apply = (session: { user: { id: string; email?: string | null } } | null) =>
-      setCloud(session ? { status: 'ready', userId: session.user.id, email: session.user.email ?? null } : { status: 'signed-out' });
+      setCloud((prev) => {
+        if (!session) return prev.status === 'signed-out' ? prev : { status: 'signed-out' };
+        if (prev.status === 'ready' && prev.userId === session.user.id) return prev;
+        return { status: 'ready', userId: session.user.id, email: session.user.email ?? null };
+      });
     sb.auth.getSession().then(({ data }) => apply(data.session));
     const { data: sub } = sb.auth.onAuthStateChange((_e, session) => apply(session));
     return () => sub.subscription.unsubscribe();
