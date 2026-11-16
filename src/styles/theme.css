@@ -1,0 +1,88 @@
+/* styles/theme.css — סגנונות העיצוב החדש. הצבעים מגיעים מ-tokens.ts (משתני --sh-*). */
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--sh-bg);color:var(--sh-text);font-family:var(--sh-font-ui);font-size:16px;line-height:1.55;direction:rtl}
+
+/* כותרת כחולה עם לוגו */
+.sh-header{background:var(--sh-navy);color:#fff;padding:10px 16px 0;position:sticky;top:0;z-index:20}
+.sh-header__row{display:flex;align-items:center;gap:12px;min-height:52px}
+.sh-header__logo{height:36px;width:auto;border-radius:8px;background:#fff;padding:3px}
+.sh-header__title{font-size:1.15rem;font-weight:800;margin:0}
+.sh-header__title .bolt{color:var(--sh-bolt)}
+.sh-header__status{margin-inline-start:auto;font-size:.8rem;opacity:.85}
+
+/* סרגל לשוניות עם אייקונים */
+.sh-tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 0 10px;scrollbar-width:none}
+.sh-tab{display:flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:var(--sh-radius-round);border:1px solid rgba(255,255,255,.25);background:transparent;color:#DCE8F4;font:inherit;font-weight:600;white-space:nowrap;cursor:pointer}
+.sh-tab[aria-selected="true"]{background:#fff;color:var(--sh-navy);border-color:#fff}
+
+/* כרטיס לבן עם מסגרת תכלת וכותרת עם אייקון */
+.sh-card{background:var(--sh-panel);border:1.5px solid var(--sh-sky);border-radius:var(--sh-radius-card);margin:14px 0;overflow:hidden;box-shadow:0 1px 2px rgba(15,46,77,.06)}
+.sh-card__head{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--sh-sky-soft);border-bottom:1px solid var(--sh-sky)}
+.sh-card__icon{font-size:1.25rem}
+.sh-card__title{margin:0;font-size:1.05rem;font-weight:700;color:var(--sh-navy)}
+.sh-card__actions{margin-inline-start:auto;display:flex;gap:8px}
+.sh-card__body{padding:14px}
+
+/* כרטיס כהה למתקן/לוח */
+.sh-facility{background:var(--sh-navy);color:#fff;border-radius:var(--sh-radius-card);padding:12px 14px;margin:12px 0}
+.sh-facility__head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.sh-facility__title{font-weight:700;font-size:1rem;margin:0}
+.sh-facility__subtitle{opacity:.75;font-size:.85rem}
+.sh-facility__body{background:var(--sh-panel);color:var(--sh-text);border-radius:10px;padding:10px}
+
+/* כפתורים עגולים צבעוניים */
+.sh-round{width:var(--sh-size-round-btn);height:var(--sh-size-round-btn);border-radius:var(--sh-radius-round);border:0;color:#fff;font-size:1.25rem;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.sh-round--add{background:var(--sh-add)}
+.sh-round--duplicate{background:var(--sh-duplicate)}
+.sh-round--remove{background:var(--sh-remove)}
+.sh-round:focus-visible{outline:3px solid var(--sh-sky);outline-offset:2px}
+
+/* שדות, תיבות סימון גדולות, רשימות בחירה */
+.sh-field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.sh-field label{font-size:.85rem;font-weight:600;color:var(--sh-text-dim)}
+.sh-input,.sh-select{min-height:var(--sh-size-touch);border:1px solid var(--sh-input-border);border-radius:var(--sh-radius-input);background:#F8FAFC;padding:0 12px;font:inherit;color:var(--sh-text)}
+.sh-input:focus,.sh-select:focus{outline:3px solid #BFD8F0;border-color:var(--sh-brand-blue)}
+.sh-check{display:flex;align-items:center;gap:12px;min-height:var(--sh-size-touch);cursor:pointer}
+.sh-check input{width:var(--sh-size-checkbox);height:var(--sh-size-checkbox);accent-color:var(--sh-brand-blue);margin:0}
+.sh-status{display:inline-flex;gap:6px;flex-wrap:wrap}
+.sh-status button{min-height:40px;padding:0 12px;border-radius:var(--sh-radius-round);border:1px solid var(--sh-input-border);background:#fff;font:inherit;cursor:pointer}
+.sh-status button[aria-pressed="true"][data-s="ok"]{background:var(--sh-ok-bg);border-color:var(--sh-ok);color:var(--sh-ok)}
+.sh-status button[aria-pressed="true"][data-s="bad"]{background:var(--sh-bad-bg);border-color:var(--sh-bad);color:var(--sh-bad)}
+.sh-status button[aria-pressed="true"][data-s="na"]{background:var(--sh-na-bg);border-color:var(--sh-na);color:var(--sh-na)}
+
+/* מסמך הדוח (תצוגה מקדימה = הדפסה) */
+.sh-doc{background:#fff;max-width:210mm;margin:16px auto;padding:14mm 14mm 18mm;font-family:var(--sh-font-print);color:#111;box-shadow:0 2px 16px rgba(15,46,77,.12)}
+.sh-letterhead{display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--sh-brand-blue);padding-bottom:10px;margin-bottom:14px}
+.sh-letterhead__logo{height:56px}
+.sh-letterhead__company{font-weight:800;font-size:1.15rem;color:var(--sh-navy)}
+.sh-letterhead__meta{margin-inline-start:auto;text-align:left;font-size:.82rem;line-height:1.5;direction:rtl}
+.sh-doc__title{text-align:center;font-size:1.35rem;font-weight:800;color:var(--sh-navy);margin:6px 0 14px}
+.sh-sec{margin:14px 0;break-inside:auto}
+.sh-sec__title{display:flex;gap:10px;align-items:center;border:1.5px solid var(--sh-brand-blue);background:var(--sh-sky-soft);color:var(--sh-navy);border-radius:6px;padding:6px 10px;font-size:1rem;font-weight:700;margin:0 0 8px;break-after:avoid}
+.sh-sec__num{background:var(--sh-brand-blue);color:#fff;border-radius:4px;padding:0 6px;font-variant-numeric:tabular-nums}
+.sh-kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:.92rem}
+.sh-kv dt{font-weight:700;color:var(--sh-text-dim)}
+.sh-kv dd{margin:0}
+.sh-table{width:100%;border-collapse:collapse;font-size:.85rem;margin:6px 0}
+.sh-table caption{text-align:right;font-weight:700;padding:4px 0}
+.sh-table th,.sh-table td{border:1px solid var(--sh-line);padding:4px 6px;text-align:right;vertical-align:top}
+.sh-table th{background:var(--sh-panel2)}
+.sh-table tr{break-inside:avoid}
+.sh-pill{display:inline-block;border-radius:var(--sh-radius-round);padding:0 8px;font-size:.78rem;font-weight:700}
+.sh-pill--ok{background:var(--sh-ok-bg);color:var(--sh-ok)}
+.sh-pill--bad{background:var(--sh-bad-bg);color:var(--sh-bad)}
+.sh-pill--na{background:var(--sh-na-bg);color:var(--sh-na)}
+.sh-pill--pending{background:var(--sh-pending-bg);color:var(--sh-pending)}
+.sh-notes{margin:0;padding-inline-start:1.6em}
+.sh-notes li{margin:3px 0}
+.sh-doc .sh-facility{background:#fff;color:#111;border:1.5px solid var(--sh-navy);padding:0;overflow:hidden}
+.sh-doc .sh-facility__head{background:var(--sh-navy);color:#fff;padding:6px 10px;margin:0}
+.sh-doc .sh-facility__body{border-radius:0}
+.sh-signature{display:flex;gap:24px;justify-content:space-between;margin-top:24px}
+.sh-signature div{flex:1;border-top:1px solid #333;padding-top:4px;text-align:center;font-size:.85rem}
+.sh-doc__footer{margin-top:18px;border-top:1px solid var(--sh-line);padding-top:6px;font-size:.75rem;color:var(--sh-text-dim);display:flex;justify-content:space-between}
+
+.sh-container{max-width:960px;margin:0 auto;padding:0 16px 96px}
+.sh-skeleton-note{background:var(--sh-pending-bg);border:1px solid #F0DFA6;border-radius:10px;padding:8px 12px;font-size:.88rem}
+@media (max-width:600px){.sh-doc{padding:16px;margin:8px 0;box-shadow:none}.sh-letterhead{flex-wrap:wrap}.sh-letterhead__meta{margin-inline-start:0;text-align:right}}

@@ -1,0 +1,11 @@
+/* styles/print.css — הדפסה / PDF: רק מסמך הדוח, A4, כותרות סעיפים לא נשארות לבד בתחתית עמוד. */
+@page{size:A4;margin:12mm 10mm 14mm}
+@media print{
+  body{background:#fff}
+  .sh-header,.sh-tabs,.sh-no-print{display:none !important}
+  .sh-container{max-width:none;padding:0}
+  .sh-doc{box-shadow:none;margin:0;padding:0;max-width:none}
+  .sh-sec__title{break-after:avoid}
+  .sh-facility,.sh-table tr,.sh-signature{break-inside:avoid}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
