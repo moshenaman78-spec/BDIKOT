@@ -34,7 +34,9 @@ export function Field({ label, value, onChange, inputMode, type = 'text', placeh
   return (
     <div className="sh-field">
       <label htmlFor={id}>{label}</label>
-      <input id={id} className="sh-input" type={type} inputMode={inputMode} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      <input id={id} className="sh-input" type={type} inputMode={inputMode} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)}
+        autoComplete={type === 'password' ? 'current-password' : type === 'email' ? 'email' : undefined}
+        dir={type === 'email' || type === 'password' ? 'ltr' : undefined} />
     </div>
   );
 }

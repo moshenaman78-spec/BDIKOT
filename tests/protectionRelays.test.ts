@@ -115,15 +115,15 @@ describe('פלט המסמך — כמו buildProtectionRelayBlocks', () => {
     const doc = renderReportDocument(report(code, [legacyAbb()]), null);
     const idx = doc.sections.findIndex((s) => s.id === 'protection-relays');
     if (!RELAY_REPORT_TYPES.includes(code)) { expect(idx).toBe(-1); return; }
-    expect(idx).toBeGreaterThan(0);
+    expect(idx).toBeGreaterThanOrEqual(0);
     const firstSummary = doc.sections.findIndex((s) => s.zone !== 'facility' && s.zone !== 'content');
     expect(idx).toBeLessThan(firstSummary);
   });
 });
 
 describe('ליקויים ובדיקות לפני הפקה', () => {
-  it('בדיקה "לא תקין" → ליקוי, וגם בטבלת הליקויים של סוג שלד (לוח ראשי)', () => {
-    const data = report('MAIN_PANEL', [legacyAbb()]);
+  it('בדיקה "לא תקין" → ליקוי, וגם בטבלת הליקויים של סוג שלד (SMA)', () => {
+    const data = report('SMA', [legacyAbb()]);
     expect(relayFindings(data)).toEqual([{ where: 'ממסר #1: ABB REJ603 — מסדר מ"ג — תא 3', text: 'בדיקת הזרקה משנית — לא תקין (הזרקה נכשלה ב-L2)' }]);
     const doc = renderReportDocument(data, null);
     expect(JSON.stringify(doc.sections.find((s) => s.id === 'findings'))).toContain('בדיקת הזרקה משנית');

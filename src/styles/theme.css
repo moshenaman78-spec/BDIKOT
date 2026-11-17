@@ -216,3 +216,36 @@ body{background:var(--sh-bg);color:var(--sh-text);font-family:var(--sh-font-ui);
   .sh-savebar__btns .sh-btn{flex:1;padding:0 8px;min-height:44px;font-size:.92rem}
   .sh-hide-xs{display:none}
 }
+/* מדידה + יחידה, טבלת בידוד */
+.sh-measure{display:flex;gap:6px}
+.sh-measure .sh-input{flex:1;min-width:0}
+.sh-measure .sh-select{width:86px}
+.sh-ins__grid{display:grid;grid-template-columns:1fr 1fr 96px 1fr;gap:8px;margin-bottom:8px}
+@media (max-width:600px){.sh-ins__grid{grid-template-columns:1fr 1fr}}
+.sh-ins__cell{display:flex;flex-direction:column;gap:3px;font-size:.8rem;color:var(--sh-text-dim);min-width:0}
+.sh-ins__cell .sh-input,.sh-ins__cell .sh-select{width:100%}
+.sh-ins__result{font-size:1.05rem;color:var(--sh-navy);min-height:var(--sh-size-touch);display:flex;align-items:center}
+/* מעטפת: משתמש, כניסה, רשימת סוגים */
+.sh-user{display:inline-flex;gap:8px;align-items:center;font-size:.8rem;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-link{background:none;border:0;color:#BFD8F0;text-decoration:underline;font:inherit;cursor:pointer;padding:4px}
+.sh-login{max-width:480px}
+.sh-type-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.sh-type-card{border:1.5px solid var(--sh-sky);border-radius:12px;padding:12px;background:var(--sh-panel2)}
+.sh-type-card__title{font-weight:700;color:var(--sh-navy);margin-bottom:6px}
+.sh-type-badge{display:inline-block;background:var(--sh-sky-soft);color:var(--sh-navy);border:1px solid var(--sh-sky);border-radius:999px;padding:1px 10px;font-size:.78rem;font-weight:600}
+.sh-filter{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:6px}
+@media (max-width:600px){.sh-filter{grid-template-columns:1fr}}
+.sh-version{text-align:center;font-size:.72rem;color:var(--sh-text-dim);padding:0 0 calc(var(--sh-savebar-h) + 8px)}
+/* iPhone / אנדרואיד במסך מלא (PWA): מרווח לחריץ ולפס הבית */
+.sh-header{padding-top:calc(10px + env(safe-area-inset-top, 0px));padding-inline:calc(16px + env(safe-area-inset-left, 0px))}
+.sh-savebar{padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px))}
+@media (max-width:600px){.sh-savebar{padding-bottom:calc(6px + env(safe-area-inset-bottom, 0px))}}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overscroll-behavior-y:none}
+.sh-input,.sh-select{font-size:16px} /* מתחת ל-16px Safari בטלפון מגדיל את המסך בכל הקשה */
+/* קווי חתימה ריקים (____) לא שוברים שורה — בטלפון הם הרחיבו את עמוד השער ואת כל הדף */
+.sh-cover__bottom>*{min-width:0}
+.sh-signoff{min-width:0;max-width:100%}
+.sh-signoff__table{table-layout:fixed;width:100%}
+.sh-signoff__table th,.sh-signoff__table td,.sh-signoff__line,.sh-cover__table td{overflow-wrap:anywhere;word-break:break-word}
+.sh-doc{overflow-wrap:anywhere}

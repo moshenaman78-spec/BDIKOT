@@ -1,11 +1,11 @@
 /**
- * features/report-editor/useCloud.ts — מצב החיבור לענן.
+ * features/report-editor/useCloud.ts — מצב החיבור לענן (התחברות / התנתקות), לכל האפליקציה.
  *
- * /app/ ו-/ באותו דומיין, ושתיהן משתמשות ב-supabase-js v2 עם מפתח האחסון ברירת המחדל
- * (sb-<project>-auth-token) — לכן התחברות באפליקציה הקיימת תקפה גם כאן. מסך התחברות
- * ייעודי נמצא בחבילת ה-foundation (TODO לשלב).
+ * באותו דומיין כמו האפליקציה הקיימת (/app/ ליד /) ההתחברות משותפת (אותו מפתח אחסון של supabase-js).
+ * ב-Preview של Vercel (דומיין אחר) — מתחברים כאן, במסך ההתחברות, עם אותו אימייל וסיסמה.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { OFFLINE_DEMO } from '@/config';
 import { getDeviceId, getSupabase } from '@/services/supabaseClient';
 import { supabaseReportStore } from '@/services/sync/reportStore';
 import type { SyncDeps } from '@/services/reportSyncService';
@@ -17,12 +17,30 @@ export type CloudState =
   | { status: 'ready'; userId: string; email: string | null };
 
 export function cloudConfigured(): boolean {
-  return Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+  return !OFFLINE_DEMO;
 }
 
-export function useCloud(): { cloud: CloudState; deps: SyncDeps | null } {
+/** הודעות השגיאה של Supabase Auth בעברית. */
+export function authErrorText(message: string): string {
+  if (/invalid login credentials/i.test(message)) return 'אימייל או סיסמה שגויים';
+  if (/email not confirmed/i.test(message)) return 'כתובת האימייל עדיין לא אושרה — בדוק את תיבת הדואר';
+  if (/rate limit|too many/i.test(message)) return 'יותר מדי ניסיונות — נסה שוב בעוד כמה דקות';
+  if (/failed to fetch|network/i.test(message)) return 'אין חיבור לשרת — בדוק את האינטרנט ונסה שוב';
+  return message;
+}
+
+interface CloudApi {
+  cloud: CloudState;
+  deps: SyncDeps | null;
+  signIn: (email: string, password: string) => Promise<string | null>;
+  signOut: () => Promise<void>;
+}
+
+const CloudContext = createContext<CloudApi | null>(null);
+
+function useCloudState(): CloudApi {
   const [cloud, setCloud] = useState<CloudState>(() =>
-    cloudConfigured() ? { status: 'loading' } : { status: 'off', reason: 'אין הגדרות Supabase (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY) — מצב הדגמה מקומי, ללא שמירה לענן.' },
+    cloudConfigured() ? { status: 'loading' } : { status: 'off', reason: 'מצב הדגמה בלבד (VITE_OFFLINE_DEMO) — ללא שמירה לענן.' },
   );
 
   useEffect(() => {
@@ -35,7 +53,7 @@ export function useCloud(): { cloud: CloudState; deps: SyncDeps | null } {
         if (prev.status === 'ready' && prev.userId === session.user.id) return prev;
         return { status: 'ready', userId: session.user.id, email: session.user.email ?? null };
       });
-    sb.auth.getSession().then(({ data }) => apply(data.session));
+    sb.auth.getSession().then(({ data }) => apply(data.session)).catch(() => apply(null));
     const { data: sub } = sb.auth.onAuthStateChange((_e, session) => apply(session));
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -45,5 +63,29 @@ export function useCloud(): { cloud: CloudState; deps: SyncDeps | null } {
     return { store: supabaseReportStore, deviceId: getDeviceId(), userId: cloud.userId, online: () => navigator.onLine !== false };
   }, [cloud]);
 
-  return { cloud, deps };
+  const signIn = useCallback(async (email: string, password: string) => {
+    try {
+      const { error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password });
+      return error ? authErrorText(error.message) : null;
+    } catch (e) {
+      return authErrorText(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+
+  const signOut = useCallback(async () => {
+    try { await getSupabase().auth.signOut({ scope: 'local' }); } catch { /* */ }
+  }, []);
+
+  return { cloud, deps, signIn, signOut };
+}
+
+export function CloudProvider({ children }: { children: ReactNode }) {
+  return createElement(CloudContext.Provider, { value: useCloudState() }, children);
+}
+
+/** בתוך CloudProvider — המצב המשותף; מחוץ לו (בדיקות/מסך בודד) — מצב עצמאי. */
+export function useCloud(): CloudApi {
+  const ctx = useContext(CloudContext);
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return ctx ?? useCloudState();
 }

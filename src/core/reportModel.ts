@@ -113,7 +113,7 @@ export type Block =
   /** פס מסקנה צבעוני (אישור חשמול). */
   | { kind: 'banner'; text: string; tone: 'ok' | 'warn' | 'bad' | 'na' }
   /** בלוק לחתימה ידנית: טקסט + שורות ריקות לשם/רישיון/חתימה/תאריך. */
-  | { kind: 'signoff'; title: string; text: string }
+  | { kind: 'signoff'; title: string; text: string; /** פרטים ממולאים; בלי — שורות ריקות. */ person?: { name: string; licenseType: string; licenseNo: string; date: string } }
   /** תמונה בעמוד מלא (צילום רישיון בודק). src נפתר בתצוגה (imageKey). */
   | { kind: 'image'; imageKey: 'inspectorLicense'; caption?: string }
   | { kind: 'facility'; title: string; subtitle?: string; blocks: Block[] };

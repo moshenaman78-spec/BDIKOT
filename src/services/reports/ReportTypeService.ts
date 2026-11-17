@@ -21,6 +21,7 @@ import { FIXED_DECLARATIONS, formatLastUpdated, orderSections } from '@/core/rep
 import { dynamicReportTitle, getReportType, type ReportTypeCode, type ReportTypeDefinition } from '@/core/reportTypes';
 import { EMPTY_PROFILE, type CompanyProfile } from '@/services/companySettingsService';
 import { approvalApplies, approvalSection } from '@/services/shared/approval';
+import { DEFECT_REPAIR_TYPES, defectRepairSection } from '@/services/shared/defectRepair';
 import { electricianBlock } from '@/services/shared/electricianDeclaration';
 import { photosSection } from '@/services/shared/photos';
 import { relayFindings, relaysApply, relaysSection } from '@/services/shared/protectionRelays';
@@ -51,6 +52,8 @@ export interface ReportTypeService<T extends object = Record<string, unknown>> {
   validate(typeData: T, data: ReportData): ValidationIssue[];
   buildSections(typeData: T, data: ReportData): DocumentSection[];
   findings(typeData: T): Finding[];
+  /** יש בדוח ליקוי (מפעיל הצהרת חשמלאי לתיקון ליקוי בסוגים שתומכים בה). ברירת מחדל: יש findings. */
+  hasDefect(typeData: T, data: ReportData): boolean;
 }
 
 type Impl<T extends object> = Partial<Omit<ReportTypeService<T>, 'code' | 'definition'>> & Pick<ReportTypeService<T>, 'createEmpty'>;
@@ -68,6 +71,7 @@ export function defineReportService<T extends object>(code: ReportTypeCode, impl
     validate: impl.validate ?? (() => []),
     buildSections: impl.buildSections ?? (() => []),
     findings: impl.findings ?? (() => []),
+    hasDefect: impl.hasDefect ?? ((t) => (impl.findings ? impl.findings(t).length > 0 : false)),
   };
 }
 
@@ -202,6 +206,8 @@ export function buildReportDocument<T extends object>(
           notesSection(data),
         ]),
         declarationSection(data),
+        // הצהרת חשמלאי לתיקון ליקוי — אוטומטית כשיש ליקוי (כמו hasMainPanelDefect בישן)
+        ...present([DEFECT_REPAIR_TYPES.includes(def.code) && service.hasDefect(typeData, data) ? defectRepairSection(data) : null]),
         { id: 'signature', zone: 'signature', title: 'חתימה', icon: '🖊️', blocks: [] },
         ...present([photosSection(data), licenseSection(opts.company)]),
       ];

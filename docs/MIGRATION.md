@@ -14,7 +14,7 @@
 | `src/components/report-template/` | רכיבי UI של העיצוב החדש + `ReportDocumentView` (תצוגה = הדפסה/PDF). |
 | `src/styles/` | `tokens.ts` (צבעים/גופנים במקום אחד), `theme.css`, `print.css`. |
 | `src/features/` | מסכים. כרגע `report-preview`. בהמשך תיקייה לכל סוג דוח (`features/reports/<code>/`). |
-| `tests/` | 147 בדיקות (vitest), כולל תאימות מול הישנה. |
+| `tests/` | 168 בדיקות (vitest), כולל תאימות מול הישנה. |
 
 ## 19 הסוגים — מצב העברה
 מקור: `REPORT_TYPE_CODE_TO_DISPLAY_NAME` ו-`getReportType()` ב-`js/app.js`. בדיקה `tests/reportTypes.test.ts` נכשלת אם הרשימה סוטה.
@@ -34,7 +34,7 @@
 | TRANSFORMER_WINDING | דוח בדיקת התנגדות סלילים בשטח | RPT | שלד | renderTransformerWindingReportCards |
 | HV_CABLE | דוח בדיקת כבל מתח גבוה (VLF) | RPT | חלקי | renderHvCableReportCards |
 | FLEXIBLE | דוח גמיש | RPT | שלד | renderFlexibleReportCards |
-| MAIN_PANEL | דוח בדיקת לוח חשמל ראשי | HV | שלד | renderMainPanelReportCards |
+| MAIN_PANEL | דוח בדיקת לוח חשמל ראשי | HV | **הועבר עד הסוף** (שירות + עורך + PDF + תאימות) | renderMainPanelReportCards |
 | TRANSFORMER_INSPECTION | דוח בדיקת שנאי מתח גבוה | TR | **הועבר עד הסוף** (שירות + עורך + PDF + תאימות) | renderTransformerInspectionReportCards |
 | GENERATOR | דוח בדיקת גנרטור | RPT | שלד | renderGeneratorReportCards |
 | STRING_POLARITY | בדיקת קוטביות סטרינגים ולוחות DCCB | PV | שלד | renderStringPolarityReportCards |
@@ -109,6 +109,34 @@
 **נבדק:** 136 בדיקות יחידה, ובדיקה בדפדפן מול Supabase מדומה (כל הבקשות מיורטות בדפדפן, אפס בקשות לענן אמיתי). התרחיש: דוח חדש, 2 תמונות לפני היצירה (ממתינות), שמירה (INSERT), העלאה אוטומטית, שמירה מותנית של הנתיבים, תצוגה מקדימה, PDF של 4 עמודים.
 **לא נבדק:** מול Supabase האמיתי. בפרט לא נבדקו הרשאות הדלי וה-RLS בהעלאה מ-`/app/`.
 
+## לוח חשמל ראשי — מה הועבר
+נשמר ב-`report_data.mainPanelReport`, באותו מבנה כמו בישן. הערות לפריטים נשמרות ב-`itemNotes`, במפתח `mainPanelReport.mainSwitchgear.checklist|i`.
+
+| חלק | קובץ |
+|---|---|
+| שירות: מבנה, נרמול, ליקויים (`hasMainPanelDefect`), בדיקות לפני הפקה, פלט | `services/reports/types/mainPanel.service.ts` |
+| בדיקות בידוד DAR / PI / ערך בודד (משותף) | `services/shared/insulation.ts`, `components/shared-sections/InsulationEditor.tsx` |
+| הצהרת חשמלאי לתיקון ליקוי (משותף) | `services/shared/defectRepair.ts` |
+| עורך | `features/reports/MAIN_PANEL/MainPanelEditor.tsx` |
+| כרטיסים משותפים לכל העורכים | `components/shared-sections/CommonCards.tsx` |
+
+מה הישנה עורכת ומדפיסה בפועל, ומה הועבר:
+- **מסדר מתח גבוה:** פרטים, 3 משני זרם, ו-35 פריטי בדיקה ויזואלית.
+- **תאי מתח גבוה.**
+- **בדיקות בידוד.**
+- **ממצאים מסכמים.**
+- **מודולים משותפים:** ממסרים, תמונות, אישור חשמול, הצהרת חשמלאי, תיקון ליקוי.
+
+**שים לב:** בישן `facilities[]` (לוחות עם ספקי כוח, מפסקים, פריטי בדיקה ותאי CT) ו-`mainSwitchgear.panelRows` מחושבים בקוד העורך אבל **לא מוצגים ולא מודפסים** (`facilitiesHtml` לא נכלל ב-HTML שמוחזר). לכן הם לא נערכים כאן. הם נשמרים כמו שהם, וליקוי "X" בהם עדיין נספר כליקוי, כמו בישן.
+
+הבדל מכוון: הערות לפריטי הבדיקה הוויזואלית נכתבות בישן אבל לא מודפסות. כאן הן מודפסות בעמודת "הערות".
+
+## מסך ראשי, התחברות ופריסה
+- `features/report-screen/ReportScreen.tsx` הוא מסך אחד לכל הסוגים שהועברו (`editors.tsx`): טיוטות עם סינון לפי סוג, חיפוש ורענון; דוח חדש והדגמה לכל סוג; עורך, תצוגה והדפסה.
+- `features/auth/LoginScreen.tsx`: התחברות באימייל וסיסמה (אותו חשבון). Preview בדומיין אחר לא חולק התחברות עם הישנה.
+- `src/config.ts`: ברירת מחדל לפרויקט ולמפתח הציבורי של הישנה. קישורי "האפליקציה הקיימת" מפנים ל-`https://shked.vercel.app/`.
+- פריסה ו-PWA: ראה `docs/DEPLOY.md`.
+
 ## עבודה מרובת משתמשים — איך העורך מתנהג (אחרי סקירה)
 - **בדיקת עדכניות:** בחזרה לטאב, בחזרת רשת, וכל 45 שנ׳ (קריאה בלבד). אם בענן יש גרסה חדשה ואין כאן שינויים, היא נטענת עם הודעה. אם יש כאן שינויים, חלונית הקונפליקט נפתחת מיד ולא רק בשמירה הבאה.
 - **"ביטול" בחלונית:** השמירה האוטומטית מושהית עד לחיצה על "שמור". בעבר החלונית נפתחה שוב כל 5 שניות.
@@ -140,6 +168,6 @@
 ## צעדים הבאים מוצעים
 1. העלאת ה-foundation ומיזוג.
 2. בדיקה ידנית של דוח שנאי אמיתי מול הענן: פתיחה ב-`/app/`, עריכה, צילום תמונה, שמירה, הדפסה, ופתיחה שוב בישנה.
-3. העברת סוג הדוח הבא (המודולים המשותפים — שער, תמונות, הצהרות, ממסרים — כבר מוכנים).
+3. העברת סוג הדוח הבא (המודולים המשותפים — שער, תמונות, הצהרות, ממסרים, בידוד, תיקון ליקוי — כבר מוכנים); הוספה ל-`features/report-screen/editors.tsx`.
 4. Vercel: rewrite של `/app/*` ל-`dist/app/index.html`; האפליקציה הישנה ב-`/` ללא שינוי.
 5. להמשיך סוג אחר סוג לפי שימוש.

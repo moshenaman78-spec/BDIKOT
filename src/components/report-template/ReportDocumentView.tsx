@@ -101,7 +101,17 @@ function BlockView({ block, ctx }: { block: Block; ctx: Ctx }) {
     case 'banner':
       return <div className={`sh-banner sh-banner--${block.tone}`}>{block.text}</div>;
     case 'signoff':
-      return (
+      return block.person ? (
+        <div className="sh-signoff">
+          <div className="sh-signoff__title">{block.title}</div>
+          <p style={{ whiteSpace: 'pre-wrap' }}>{block.text}</p>
+          <table className="sh-table sh-signoff__table">
+            <thead><tr><th>שם החשמלאי</th><th>סוג רישיון</th><th>מס' רישיון</th><th>תאריך</th></tr></thead>
+            <tbody><tr><td>{block.person.name || BLANK}</td><td>{block.person.licenseType || BLANK}</td><td>{block.person.licenseNo || BLANK}</td><td>{block.person.date || BLANK}</td></tr></tbody>
+          </table>
+          <div className="sh-signoff__line">חתימת החשמלאי: {BLANK}</div>
+        </div>
+      ) : (
         <div className="sh-signoff">
           <div className="sh-signoff__title">{block.title}</div>
           <p style={{ whiteSpace: 'pre-wrap' }}>{block.text}</p>

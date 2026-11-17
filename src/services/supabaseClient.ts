@@ -3,6 +3,7 @@
  * טבלאות: reports, clients, projects, company_settings, report_versions; Storage: report-files.
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '@/config';
 
 export const TABLES = {
   reports: 'reports',
@@ -22,10 +23,7 @@ let client: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
   if (client) return client;
-  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-  if (!url || !key) throw new Error('חסרים VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY (ראה .env.example)');
-  client = createClient(url, key, { auth: { persistSession: true, autoRefreshToken: true } });
+  client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   return client;
 }
 

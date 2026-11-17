@@ -8,6 +8,15 @@ export default defineConfig({
   base: '/app/',
   plugins: [react()],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-  build: { outDir: 'dist/app', emptyOutDir: true },
+  build: {
+    outDir: 'dist/app',
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // ספריות בקובץ נפרד — משתנות לעיתים רחוקות, נשארות במטמון בין פריסות
+        manualChunks: { react: ['react', 'react-dom'], supabase: ['@supabase/supabase-js'] },
+      },
+    },
+  },
   test: { environment: 'node', include: ['tests/**/*.test.ts'] },
 });

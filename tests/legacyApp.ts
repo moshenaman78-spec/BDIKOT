@@ -82,3 +82,55 @@ export function legacyRenderSmoke(state: Json): void {
   void ti.conclusion.status;
   state.notes.forEach((n: Json) => { if (typeof n !== 'string') throw new Error('notes חייב להיות מערך מחרוזות'); });
 }
+
+/* ---------------- לוח חשמל ראשי — mergeDefaults (שורה ~11808 בישן) ---------------- */
+
+const SWITCHGEAR_LEN = 35;
+export function legacyMainPanelBase(): Json {
+  const checklist: Json = {}; for (let i = 0; i < SWITCHGEAR_LEN; i++) checklist[i] = '';
+  return {
+    protectionMethod: '', electricalApproval: '', accompaniedBy: '', testInstruments: [],
+    facilities: [{ id: 'panel_base', name: '' }], summaryItems: [],
+    mainSwitchgear: {
+      notes: '', cabinetDetails: '', checklist, panelRows: [],
+      assemblyDetails: {
+        name: '', manufacturer: '', model: '', serialNo: '', yearOfManufacture: '', ratedVoltage: '', ratedVoltageUnit: 'kV', ratedCurrent: '', ratedCurrentUnit: 'A',
+        breakingCapacity: '', breakingCapacityUnit: 'kA', numberOfCells: '', insulationType: '', standard: '', installLocation: '', notes: '',
+        measurementCT: { type: '', model: '', va: '', alf: '', cls: '', ratio: '' },
+        protectionCT: { manufacturer: '', model: '', serialNo: '', secondaryCurrent: '', busbarWithstand: '' },
+        summaryCT: { type: '', model: '', va: '', alf: '', ratio: '' },
+      },
+    },
+    hvCells: [],
+    insulationTests: { rows: [0, 1, 2].map(() => ({ r15: '', r60: '', dar: '', note: '', manualClassification: '', unit: 'MΩ', temp: '' })), testMethod: 'dar' },
+  };
+}
+
+export function legacyLoadMainPanel(loaded: Json): Json {
+  const mpBase = legacyMainPanelBase();
+  const mpSaved = loaded.mainPanelReport || {};
+  const state: Json = Object.assign({}, { notes: [''], itemNotes: {}, approvalStatus: '' }, loaded);
+  state.mainPanelReport = {
+    protectionMethod: mpSaved.protectionMethod || mpBase.protectionMethod,
+    electricalApproval: mpSaved.electricalApproval || mpBase.electricalApproval,
+    accompaniedBy: mpSaved.accompaniedBy || mpBase.accompaniedBy,
+    testInstruments: Array.isArray(mpSaved.testInstruments) ? mpSaved.testInstruments : mpBase.testInstruments,
+    facilities: Array.isArray(mpSaved.facilities) ? mpSaved.facilities : mpBase.facilities,
+    summaryItems: Array.isArray(mpSaved.summaryItems) ? mpSaved.summaryItems : mpBase.summaryItems,
+    mainSwitchgear: deepMergeGeneric(mpBase.mainSwitchgear, mpSaved.mainSwitchgear),
+    hvCells: Array.isArray(mpSaved.hvCells) ? mpSaved.hvCells : mpBase.hvCells,
+    insulationTests: deepMergeGeneric(mpBase.insulationTests, mpSaved.insulationTests),
+  };
+  return state;
+}
+
+/** אותן גישות שהרינדור/הדפסה הישנים עושים — לא יקרוס. */
+export function legacyMainPanelRenderSmoke(state: Json): void {
+  const mp = state.mainPanelReport;
+  for (let i = 0; i < SWITCHGEAR_LEN; i++) void String(mp.mainSwitchgear.checklist[i]);
+  void mp.mainSwitchgear.assemblyDetails.measurementCT.type;
+  mp.hvCells.forEach((c: Json) => { void (c.cellType || c.cellName); void String(c.ratedVoltageUnit); });
+  [0, 1, 2].forEach((i) => { void mp.insulationTests.rows[i].r15; void mp.insulationTests.rows[i].unit; });
+  mp.summaryItems.forEach((s: Json) => { void s.number; void String(s.text).trim(); });
+  if (typeof state.itemNotes !== 'object') throw new Error('itemNotes חייב להיות אובייקט');
+}

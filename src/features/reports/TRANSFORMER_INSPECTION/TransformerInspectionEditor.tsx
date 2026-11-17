@@ -6,19 +6,19 @@
  * כל שינוי נכתב ישירות ל-report_data.transformerInspectionReport (המפתח של האפליקציה הישנה).
  */
 import { useState } from 'react';
-import { FIXED_DECLARATIONS, type ReportData } from '@/core/reportModel';
+import type { ReportData } from '@/core/reportModel';
 import {
   BigCheckbox, Card, ChoiceChips, ComboField, FacilityCard, Field, Grid2, RoundButton, SubHead, TextAreaField, type Choice,
 } from '@/components/report-template';
 import { ProtectionRelaysEditor } from '@/components/protection-relays';
-import { ApprovalEditor, ElectricianDeclarationEditor, PhotosEditor, TestInstrumentsPicker } from '@/components/shared-sections';
-import type { PhotoResolver } from '@/components/report-template/ReportDocumentView';
-import type { Equipment } from '@/services/shared/testInstruments';
+import {
+  ApprovalEditor, DeclarationsCard, FacilityDetailsCard, NO_SHARED, NotesCard, PhotosEditor, SummaryItemsCard, type Mutate, type SharedEditorProps,
+} from '@/components/shared-sections';
 import { readTypeData, writeTypeData } from '@/services/reports/ReportTypeService';
 import { relayFindings } from '@/services/shared/protectionRelays';
 import {
   TI_CHECKLIST, TI_INSULATION_TESTS, TI_OPTIONS, addTransformer, appendDefectsToSummary, collectDefects, duplicateTransformer,
-  removeTransformer, renumberSummary, transformerInspectionService as svc, transformerTitle,
+  removeTransformer, transformerInspectionService as svc, transformerTitle,
   type GroundingBlock, type TransformerInspectionReport, type TransformerItem,
 } from '@/services/reports/types/transformerInspection.service';
 
@@ -32,17 +32,6 @@ const CONCLUSION_CHOICES: readonly Choice[] = [
   { value: 'לא תקין', label: 'לא תקין', tone: 'bad' },
 ];
 
-type Mutate = (fn: (draft: ReportData) => void) => void;
-
-export interface SharedEditorProps {
-  equipment: Equipment[] | null;
-  electricianHiddenGlobally: boolean;
-  onAddPhotos: (files: File[]) => void;
-  resolvePhoto: PhotoResolver;
-  photosBusy?: boolean;
-}
-
-const NO_SHARED: SharedEditorProps = { equipment: null, electricianHiddenGlobally: false, onAddPhotos: () => {}, resolvePhoto: () => undefined };
 
 export function TransformerInspectionEditor({ data, mutate, shared = NO_SHARED, confirm = (m) => window.confirm(m), notify = (m) => window.alert(m) }: {
   data: ReportData; mutate: Mutate; shared?: SharedEditorProps; confirm?: (msg: string) => boolean; notify?: (msg: string) => void;
@@ -55,26 +44,11 @@ export function TransformerInspectionEditor({ data, mutate, shared = NO_SHARED, 
     });
   const updTr = (id: string, fn: (t: TransformerItem) => void) =>
     updTi((d) => { const t = d.transformers.find((x) => x.id === id); if (t) fn(t); });
-  const meta = (k: string) => String(data.meta[k] ?? '');
-  const setMeta = (k: string) => (v: string) => mutate((d) => { d.meta[k] = v; });
-  const notes = data.notes.length ? data.notes : [''];
   const defects = [...collectDefects(ti), ...relayFindings(data)];
 
   return (
     <div className="sh-editor">
-      <Card title="פרטי המתקן (עמוד השער)" icon="🏭">
-        <Grid2>
-          <Field label="מזמין הבדיקה" value={meta('client')} onChange={setMeta('client')} />
-          <Field label="לידי (איש קשר)" value={meta('attentionTo')} onChange={setMeta('attentionTo')} />
-          <Field label="שם המתקן" value={meta('siteName')} onChange={setMeta('siteName')} />
-          <Field label="מיקום המתקן" value={meta('address')} onChange={setMeta('address')} />
-          <Field label="תאריך הבדיקה" type="date" value={meta('date')} onChange={setMeta('date')} />
-          <Field label="תאריך הפקת הדוח" type="date" value={meta('issueDate')} onChange={setMeta('issueDate')} />
-        </Grid2>
-        <TextAreaField label="תיאור המתקן/העבודה" value={meta('description')} onChange={setMeta('description')} rows={2} />
-        <TestInstrumentsPicker data={data} mutate={mutate} equipment={shared.equipment} />
-        <p className="sh-dim">מספר דוח: <b>{data.meta.reportNumber || '—'}</b> (נקבע ביצירה ולא משתנה)</p>
-      </Card>
+      <FacilityDetailsCard data={data} mutate={mutate} equipment={shared.equipment} />
 
       <Card title="שנאים" icon="🔋" actions={<RoundButton kind="add" label="הוסף שנאי" onClick={() => updTi(addTransformer)} />}>
         {ti.transformers.map((t, i) => (
@@ -94,25 +68,11 @@ export function TransformerInspectionEditor({ data, mutate, shared = NO_SHARED, 
 
       <PhotosEditor data={data} mutate={mutate} onAddFiles={shared.onAddPhotos} resolvePhoto={shared.resolvePhoto} busy={shared.photosBusy} confirm={confirm} />
 
-      <Card title="ממצאים מסכמים" icon="📋">
-        {ti.summaryItems.map((s, i) => (
-          <div className="sh-numbered" key={i}>
-            <span className="sh-numbered__n">{i + 1}</span>
-            <textarea className="sh-input sh-textarea" aria-label={`ממצא ${i + 1}`} value={s.text}
-              onChange={(e) => updTi((d) => { d.summaryItems[i].text = e.target.value; })} />
-            <RoundButton kind="remove" label={`מחק ממצא ${i + 1}`} onClick={() => updTi((d) => ({ ...d, summaryItems: renumberSummary(d.summaryItems.filter((_, j) => j !== i)) }))} />
-          </div>
-        ))}
-        <div className="sh-actions">
-          <RoundButton kind="add" label="הוסף ממצא" onClick={() => updTi((d) => ({ ...d, summaryItems: renumberSummary([...d.summaryItems, { number: 0, text: '' }]) }))} />
-          <span className="sh-dim">הוסף ממצא</span>
-          {defects.length ? (
-            <button type="button" className="sh-btn" onClick={() => { const extra = relayFindings(data); updTi((d) => appendDefectsToSummary(d, extra)); }}>
-              ⤵ העתק {defects.length} ליקויים שסומנו "לא תקין"
-            </button>
-          ) : null}
-        </div>
-      </Card>
+      <SummaryItemsCard
+        items={ti.summaryItems} defectsCount={defects.length}
+        onChange={(items) => updTi((d) => ({ ...d, summaryItems: items }))}
+        onCopyDefects={() => { const extra = relayFindings(data); updTi((d) => appendDefectsToSummary(d, extra)); }}
+      />
 
       <Card title="מסקנה" icon="✅">
         <ChoiceChips ariaLabel="מסקנה" value={ti.conclusion.status} choices={CONCLUSION_CHOICES} onChange={(v) => updTi((d) => { d.conclusion.status = v; })} />
@@ -121,28 +81,9 @@ export function TransformerInspectionEditor({ data, mutate, shared = NO_SHARED, 
 
       <ApprovalEditor data={data} mutate={mutate} />
 
-      <Card title="הערות" icon="📝">
-        {notes.map((n, i) => (
-          <div className="sh-numbered" key={i}>
-            <span className="sh-numbered__n">{i + 1}</span>
-            <textarea className="sh-input sh-textarea" aria-label={`הערה ${i + 1}`} value={n}
-              onChange={(e) => mutate((d) => { const arr = d.notes.length ? d.notes : ['']; arr[i] = e.target.value; d.notes = arr; })} />
-            <RoundButton kind="remove" label={`מחק הערה ${i + 1}`} onClick={() => mutate((d) => { d.notes = d.notes.filter((_, j) => j !== i); if (!d.notes.length) d.notes = ['']; })} />
-          </div>
-        ))}
-        <div className="sh-actions">
-          <RoundButton kind="add" label="הוסף הערה" onClick={() => mutate((d) => { d.notes = [...(d.notes.length ? d.notes : ['']), '']; })} />
-          <span className="sh-dim">הוסף הערה</span>
-        </div>
-      </Card>
+      <NotesCard data={data} mutate={mutate} />
 
-      <Card title="הצהרות לסוף הדוח" icon="✍️">
-        <SubHead>הערות בודק (קבועות, מודפסות תמיד)</SubHead>
-        <ol className="sh-notes">{FIXED_DECLARATIONS.map((d) => <li key={d}>{d}</li>)}</ol>
-        <TextAreaField label="הצהרה נוספת (אופציונלי)" value={String(data.customDeclaration ?? '')} onChange={(v) => mutate((d) => { d.customDeclaration = v; })} rows={2} />
-        <SubHead>הצהרת החשמלאי המבצע</SubHead>
-        <ElectricianDeclarationEditor data={data} mutate={mutate} hiddenGlobally={shared.electricianHiddenGlobally} />
-      </Card>
+      <DeclarationsCard data={data} mutate={mutate} electricianHiddenGlobally={shared.electricianHiddenGlobally} />
     </div>
   );
 }

@@ -6,9 +6,6 @@
 npm install
 ```
 ```bash
-cp .env.example .env.local
-```
-```bash
 npm run dev
 ```
 ```bash
@@ -16,3 +13,6 @@ npm test
 ```
 
 מבנה, מצב 19 סוגי הדוחות וכללי השמירה: [docs/MIGRATION.md](docs/MIGRATION.md).
+פריסה ל-Vercel (Preview) והתקנה בטלפון/טאבלט: [docs/DEPLOY.md](docs/DEPLOY.md).
+
+בלי הגדרות נוספות האפליקציה מתחברת לאותו פרויקט Supabase של האפליקציה הקיימת (התחברות באימייל וסיסמה).

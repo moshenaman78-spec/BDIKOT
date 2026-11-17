@@ -1,37 +1,54 @@
 import { useState } from 'react';
 import { AppHeader, TabBar, type TabDef } from '@/components/report-template';
 import { ReportPreviewScreen } from '@/features/report-preview/ReportPreviewScreen';
-import { TransformerInspectionScreen } from '@/features/reports/TRANSFORMER_INSPECTION/TransformerInspectionScreen';
+import { ReportScreen } from '@/features/report-screen/ReportScreen';
+import { LoginScreen } from '@/features/auth/LoginScreen';
+import { CloudProvider, useCloud } from '@/features/report-editor/useCloud';
+import { APP_VERSION, LEGACY_APP_URL } from '@/config';
 
-type TabKey = 'transformer' | 'preview' | 'drafts' | 'clients' | 'settings';
+type TabKey = 'reports' | 'preview' | 'legacy';
 const TABS: TabDef<TabKey>[] = [
-  { key: 'transformer', label: 'שנאי מתח גבוה', icon: '🔋' },
+  { key: 'reports', label: 'דוחות', icon: '📁' },
   { key: 'preview', label: 'תבנית דוח', icon: '📄' },
-  { key: 'drafts', label: 'טיוטות בענן', icon: '📁' },
-  { key: 'clients', label: 'לקוחות', icon: '🗂️' },
-  { key: 'settings', label: 'הגדרות חברה', icon: '⚙️' },
+  { key: 'legacy', label: 'לקוחות והגדרות', icon: '⚙️' },
 ];
 
-export function App() {
-  const [tab, setTab] = useState<TabKey>('transformer');
+function Shell() {
+  const { cloud, signIn, signOut } = useCloud();
+  const [tab, setTab] = useState<TabKey>('reports');
+  const [demo, setDemo] = useState(false);
+  const signedIn = cloud.status === 'ready';
+  const status = cloud.status === 'ready'
+    ? <span className="sh-user">👤 {cloud.email} <button type="button" className="sh-link" onClick={() => { if (window.confirm('להתנתק? שינויים שלא נשמרו בענן נשארים שמורים במכשיר.')) void signOut(); }}>התנתק</button></span>
+    : cloud.status === 'loading' ? 'מתחבר…' : demo || cloud.status === 'off' ? 'מצב הדגמה' : null;
+
+  const needsLogin = cloud.status === 'signed-out' && !demo;
   return (
     <>
-      <AppHeader title="Shaked Test Reports">
-        <TabBar tabs={TABS} active={tab} onChange={setTab} />
+      <AppHeader title="Shaked Test Reports" status={status}>
+        {needsLogin || cloud.status === 'loading' ? null : <TabBar tabs={TABS} active={tab} onChange={setTab} />}
       </AppHeader>
-      {tab === 'transformer' ? <TransformerInspectionScreen /> : tab === 'preview' ? <ReportPreviewScreen /> : (
-        <div className="sh-container">
-          {/* TODO(foundation): המסכים התחברות / טיוטות / פרטים כלליים נבנו ב-bdikot-react-foundation.zip — לשלב כאן. */}
-          <section className="sh-card">
-            <div className="sh-card__head"><h2 className="sh-card__title">{TABS.find((t) => t.key === tab)?.label}</h2></div>
-            <div className="sh-card__body">
-              <p>המסך הזה עדיין לא הועבר לאפליקציה החדשה. בינתיים עובדים בו באפליקציה הקיימת — אותו חשבון ואותם נתונים.</p>
-              <p className="sh-dim">דוחות שנאי מתח גבוה כבר נערכים כאן (לשונית "שנאי מתח גבוה"), כולל הטיוטות שלהם.</p>
-              <a className="sh-btn sh-btn--primary" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} href="/">פתח את האפליקציה הקיימת ↗</a>
-            </div>
-          </section>
-        </div>
-      )}
+      {cloud.status === 'loading' ? <div className="sh-container"><p className="sh-dim" role="status">מתחבר…</p></div>
+        : needsLogin ? <LoginScreen onSignIn={signIn} onDemo={() => setDemo(true)} />
+          : tab === 'reports' ? <ReportScreen key={signedIn ? 'cloud' : 'demo'} />
+            : tab === 'preview' ? <ReportPreviewScreen />
+              : (
+                <div className="sh-container">
+                  <section className="sh-card">
+                    <div className="sh-card__head"><h2 className="sh-card__title">לקוחות, הגדרות חברה ושאר סוגי הדוחות</h2></div>
+                    <div className="sh-card__body">
+                      <p>המסכים האלה עדיין לא הועברו לאפליקציה החדשה. בינתיים עובדים בהם באפליקציה הקיימת — אותו חשבון ואותם נתונים.</p>
+                      <p className="sh-dim">דוחות "שנאי מתח גבוה" ו"לוח חשמל ראשי" כבר נערכים כאן (לשונית "דוחות"). הגדרות החברה (לוגו, חתימה, פרטי בודק) נקראות מהענן ומופיעות בדוחות כאן.</p>
+                      <a className="sh-btn sh-btn--primary" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} href={LEGACY_APP_URL} target="_blank" rel="noopener">פתח את האפליקציה הקיימת ↗</a>
+                    </div>
+                  </section>
+                </div>
+              )}
+      <div className="sh-version sh-no-print">גרסה <bdi dir="ltr">{APP_VERSION}</bdi></div>
     </>
   );
+}
+
+export function App() {
+  return <CloudProvider><Shell /></CloudProvider>;
 }
