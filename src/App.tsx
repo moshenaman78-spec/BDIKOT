@@ -38,7 +38,7 @@ function Shell() {
                     <div className="sh-card__head"><h2 className="sh-card__title">לקוחות, הגדרות חברה ושאר סוגי הדוחות</h2></div>
                     <div className="sh-card__body">
                       <p>המסכים האלה עדיין לא הועברו לאפליקציה החדשה. בינתיים עובדים בהם באפליקציה הקיימת — אותו חשבון ואותם נתונים.</p>
-                      <p className="sh-dim">דוחות "שנאי מתח גבוה" ו"לוח חשמל ראשי" כבר נערכים כאן (לשונית "דוחות"). הגדרות החברה (לוגו, חתימה, פרטי בודק) נקראות מהענן ומופיעות בדוחות כאן.</p>
+                      <p className="sh-dim">דוחות "שנאי מתח גבוה", "לוח חשמל ראשי" ו"טיפול בממירי SMA" כבר נערכים כאן (לשונית "דוחות"). הגדרות החברה (לוגו, חתימה, פרטי בודק) נקראות מהענן ומופיעות בדוחות כאן.</p>
                       <a className="sh-btn sh-btn--primary" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }} href={LEGACY_APP_URL} target="_blank" rel="noopener">פתח את האפליקציה הקיימת ↗</a>
                     </div>
                   </section>

@@ -25,8 +25,8 @@ describe('הגדרות', () => {
 });
 
 describe('סוגים שהועברו', () => {
-  it('שנאי מתח גבוה ולוח חשמל ראשי; הדגמה של כל אחד נבנית ונבדקת', () => {
-    expect(MIGRATED_TYPES).toEqual(['TRANSFORMER_INSPECTION', 'MAIN_PANEL']);
+  it('שנאי מתח גבוה, לוח חשמל ראשי וטיפול בממירי SMA; הדגמה של כל אחד נבנית ונבדקת', () => {
+    expect(MIGRATED_TYPES).toEqual(['TRANSFORMER_INSPECTION', 'MAIN_PANEL', 'SMA']);
     for (const code of MIGRATED_TYPES) {
       const d = demoReport(code);
       expect(renderReportDocument(d, null).typeCode).toBe(code);

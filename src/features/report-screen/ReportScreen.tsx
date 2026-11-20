@@ -21,6 +21,7 @@ import type { DraftListItem } from '@/services/sync/reportStore';
 import { localIsoDate } from '@/services/sync/editorRules';
 import { useCloud } from '@/features/report-editor/useCloud';
 import { isDirty, readBackup, useReportEditor } from '@/features/report-editor/useReportEditor';
+import { sampleSmaReportData } from '@/services/reports/types/sma.service';
 import { MIGRATED_EDITORS, MIGRATED_TYPES } from './editors';
 
 export function demoReport(code: ReportTypeCode): ReportData {
@@ -32,6 +33,7 @@ export function demoReport(code: ReportTypeCode): ReportData {
     showElectricianDeclaration: true,
     approvalStatus: '',
   };
+  if (code === 'SMA') return sampleSmaReportData();
   const svc = serviceFor(code);
   writeTypeData(svc, data, svc.createEmpty());
   return data;

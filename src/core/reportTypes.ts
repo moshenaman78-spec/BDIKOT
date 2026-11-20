@@ -78,6 +78,8 @@ export const DEFAULT_REPORT_TYPE: ReportTypeCode = 'SMA';
 
 export const REPORT_TYPES: Readonly<Record<ReportTypeCode, ReportTypeDefinition>> = {
   SMA: {
+    // האפליקציה החדשה: דוח תחזוקה (תחנות TR, לוח, תאי מ"ג, שנאי, ניקיון ממיר, בידוד).
+    // legacy מתעד את הרינדור הישן של לוחות DC — לא את מבנה דוח התחזוקה.
     code: 'SMA', nameHe: 'טיפול בממירי SMA', numberPrefix: 'SMA',
     categories: ['תחזוקה וממירים'], sharedSectionsStart: 7, icon: '🔌', documentKind: 'company-letterhead',
     legacy: { renderFn: '(ברירת המחדל של render — panels/panelOrder)', factoryFns: ['makePanel', 'makeItemPair', 'makeDccbItem', 'makeDpsItem'] },

@@ -10,6 +10,7 @@ import { emptyMeta, emptySettings } from '@/core/reportModel';
 import { getReportType, reportTypeFromHebrewName, type ReportTypeCode } from '@/core/reportTypes';
 import { nextReportNumber, type LocalCounter } from './reportNumber';
 import { serviceFor } from './reports/registry';
+import { SMA_ELECTRICIAN_DECLARATION } from './reports/types/sma.service';
 import { writeTypeData } from './reports/ReportTypeService';
 import type { ReportStore, UpdatePatch } from './sync/reportStore';
 import {
@@ -69,6 +70,10 @@ export async function createNewReport(
     showElectricianDeclaration: true,
     approvalStatus: '',
   };
+  if (code === 'SMA') {
+    data.electricianDeclarationText = SMA_ELECTRICIAN_DECLARATION;
+    data.settings.inverterBrand = 'SMA';
+  }
   const svc = serviceFor(code);
   writeTypeData(svc, data, svc.createEmpty());
   return data;

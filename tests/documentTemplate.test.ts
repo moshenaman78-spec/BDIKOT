@@ -23,14 +23,18 @@ describe('תבנית המסמך', () => {
   });
 
   it('סדר: מתקן → תוכן → סיכום → הערות → הצהרה → חתימה, ממוספר 01..', () => {
-    const r = report('SMA');
+    const r = report('GENERAL');
     (r.typeData as { facilities: Array<{ measurements: unknown[] }> }).facilities[0].measurements.push({ label: 'בידוד', value: '0.1', unit: 'MΩ', pass: false });
     const doc = renderReportDocument(r, null);
     const zones = doc.sections.map((s) => s.zone);
     // "פרטי המתקן" בעמוד השער (כמו בישן), לא כסעיף
     expect(zones).toEqual(['content', 'summary', 'notes', 'declaration', 'signature']);
     expect(doc.sections.map((s) => s.number)).toEqual(['01', '02', '03', '04', '05']);
-    expect(doc.cover?.title).toBe('טיפול בממירי SMA');
+    expect(doc.cover?.title).toBe('דוח כללי לבדיקת מתקן חשמל');
+  });
+
+  it('כותרת SMA נשארת טיפול בממירי SMA', () => {
+    expect(renderReportDocument(report('SMA'), null).cover?.title).toBe('טיפול בממירי SMA');
   });
 
   it('הערות: מחרוזות ריקות לא מודפסות; הצהרה = 5 הקבועות + נוספת', () => {
@@ -77,7 +81,7 @@ describe('תבנית המסמך', () => {
   });
 
   it('normalize שומר שדות לא מוכרים (אין איבוד נתונים מהגרסה הישנה)', () => {
-    const n = serviceFor('SMA').normalize({ facilities: [], legacy: {}, someOldField: 42 });
+    const n = serviceFor('GENERAL').normalize({ facilities: [], legacy: {}, someOldField: 42 });
     expect((n as Record<string, unknown>).someOldField).toBe(42);
     expect(n.facilities.length).toBe(1);
   });

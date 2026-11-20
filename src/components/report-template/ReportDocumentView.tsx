@@ -73,7 +73,7 @@ function BlockView({ block, ctx }: { block: Block; ctx: Ctx }) {
       return (
         <table className="sh-table">
           {block.caption ? <caption>{block.caption}</caption> : null}
-          <thead><tr>{block.columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
+          <thead><tr>{block.columns.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
           <tbody>{block.rows.map((r, i) => <tr key={i}>{r.map((c, j) => block.ltrColumns?.includes(j) ? <td key={j} dir="ltr" className="sh-ltr">{c}</td> : <td key={j}>{c}</td>)}</tr>)}</tbody>
         </table>
       );
