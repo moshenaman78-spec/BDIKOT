@@ -28,13 +28,26 @@
     ['currentL1', 'זרם L1 (A)'], ['currentL2', 'זרם L2 (A)'], ['currentL3', 'זרם L3 (A)'],
     ['insulationToGround', 'התנגדות בידוד לאדמה (MΩ)']
   ];
-  var INFO = [
-    ['name', 'שם / ייעוד הקבל'], ['manufacturer', 'יצרן'], ['codeNo', 'קוד (Code No)'], ['referenceNo', 'מק"ט (Reference No)'],
-    ['serialNo', 'מספר סידורי'], ['year', 'שנת ייצור'], ['ratedPower', 'הספק נקוב (kvar)'], ['ratedVoltage', 'מתח נקוב (kV)'],
-    ['ratedCurrent', 'זרם נקוב (A)'], ['ratedFrequency', 'תדר נקוב (Hz)'], ['steps', 'הרכב דרגות (Steps)'],
-    ['insulationLevel', 'רמת בידוד (kV)'], ['weight', 'משקל (kg)'], ['ipRating', 'דרגת הגנה IP'],
-    ['temperatureRange', 'טווח טמפרטורה'], ['installLocation', 'מיקום התקנה']
+  // לפי סדר ושמות לוחית היצרן (כמו בתמונה מהשטח), בעברית + המונח באנגלית שעל הלוחית
+  var PLATE = [ // [מפתח, תווית בעברית (+יחידה), המונח שעל הלוחית, דוגמה, סוג מקלדת]
+    ['manufacturer', 'יצרן', 'Manufacturer', 'CIRCUTOR', ''],
+    ['codeNo', 'קוד', 'Code No', 'R99HL100141XX', 'ltr'],
+    ['referenceNo', 'מק"ט', 'Reference No', 'R90SMFC124001200', 'ltr'],
+    ['serialNo', 'מספר סידורי', 'Serial No', '31812038800002', 'ltr'],
+    ['ratedPower', 'הספק נקוב [kvar]', 'Rated Power', '1200', 'num'],
+    ['ratedVoltage', 'מתח נקוב [kV]', 'Rated Voltage', '24', 'num'],
+    ['ratedCurrent', 'זרם נקוב [A]', 'Rated Current', '28.86', 'num'],
+    ['ratedFrequency', 'תדר נקוב [Hz]', 'Rated Frequency', '50', 'num'],
+    ['steps', 'הרכב דרגות', 'Steps Composition', '1 x 1200 kvar', 'ltr'],
+    ['insulationLevel', 'רמת בידוד [kV]', 'Insulation Level', '50/125', 'ltr'],
+    ['weight', 'משקל [kg]', 'Weight', '234', 'num'],
+    ['ipRating', 'דרגת הגנה', 'Protection Degree', 'IP00', 'ltr'],
+    ['temperatureRange', 'טווח טמפרטורה [°C]', 'Temperature Range', '-10/+45', 'ltr'],
+    ['year', 'שנת ייצור', '', '', 'num'],
+    ['country', 'ארץ ייצור', 'Made in', 'Spain', ''],
+    ['installLocation', 'מיקום התקנה', '', '', '']
   ];
+  var INFO = [['name', 'שם / ייעוד הקבל']].concat(PLATE.map(function (p) { return [p[0], p[1]]; }));
   function makeCap() {
     var c = { ratedFrequency: '50' };
     INFO.forEach(function (f) { if (!(f[0] in c)) c[f[0]] = ''; });
@@ -63,7 +76,11 @@
     var title = total === 1 ? '<span class="num">' + num(5) + '</span> פרטי קבל מתח גבוה'
       : (i === 0 ? '<span class="num">' + num(5) + '</span> פרטי קבל מתח גבוה — C1' : 'פרטי קבל מתח גבוה — C' + (i + 1));
     var key = 'hv-capacitor-' + i;
-    var f = function (k, lbl, restrict) { return textField(lbl, bp + '.' + k, c[k], 'text', restrict || null); };
+    var f = function (k, lbl, ph, mode) {
+      var attrs = (mode === 'num' ? ' inputmode="decimal" dir="ltr"' : (mode === 'ltr' ? ' dir="ltr" autocapitalize="characters" autocorrect="off" spellcheck="false"' : '')) +
+        (ph ? ' placeholder="' + escapeAttr('לדוגמה: ' + ph) + '"' : '');
+      return '<div class="field"><label>' + lbl + '</label><input type="text" data-textpath="' + bp + '.' + k + '"' + attrs + ' value="' + escapeAttr(c[k] == null ? '' : c[k]) + '"></div>';
+    };
     return '\n<section class="card" data-key="' + key + '">' +
       '<div class="card-head" data-toggle="' + key + '"><h2>' + title + '</h2>' +
       '<span style="display:flex; align-items:center; gap:6px;">' +
@@ -71,19 +88,14 @@
       (total > 1 ? '<button type="button" class="del-panel-btn" onclick="event.stopPropagation()" data-delrow="hvCapacitors|' + i + '" title="מחק קבל זה">✕</button>' : '') +
       '<span class="chev">▾</span></span></div>' +
       '<div class="card-body">' +
-      f('name', 'שם / ייעוד הקבל') +
-      '<p style="font-size:11.5px; color:var(--text-dim); margin:4px 0 0;">נתוני לוחית היצרן של הקבל:</p>' +
-      '<div class="grid2">' +
-      f('manufacturer', 'יצרן') + f('codeNo', 'קוד (Code No)', 'alnum-en') + f('referenceNo', 'מק"ט (Reference No)', 'alnum-en') +
-      f('serialNo', 'מספר סידורי', 'alnum-en') + f('year', 'שנת ייצור', 'digits') + f('ratedPower', 'הספק נקוב (kvar)', 'decimal') +
-      f('ratedVoltage', 'מתח נקוב (kV)', 'decimal') + f('ratedCurrent', 'זרם נקוב (A)', 'decimal') + f('ratedFrequency', 'תדר נקוב (Hz)', 'digits') +
-      f('steps', 'הרכב דרגות (Steps)') + f('insulationLevel', 'רמת בידוד (kV)') + f('weight', 'משקל (kg)', 'decimal') +
-      f('ipRating', 'דרגת הגנה IP') + f('temperatureRange', 'טווח טמפרטורה') + f('installLocation', 'מיקום התקנה') +
-      '</div>' +
+      f('name', 'שם / ייעוד הקבל', 'סוללת קבלים 1', '') +
+      '<div style="margin:10px 0 4px; font-weight:700;">📋 פרטי לוחית היצרן (Nameplate)</div>' +
+      '<p style="font-size:11.5px; color:var(--text-dim); margin:0 0 4px;">העתק מהלוחית שעל הקבל — אפשר לכתוב בדיוק כמו בלוחית, גם עם פסיק עשרוני.</p>' +
+      '<div class="grid2">' + PLATE.map(function (p) { return f(p[0], p[1] + (p[2] ? ' <bdi dir="ltr" style="font-weight:400; opacity:.65; font-size:.9em;">' + p[2] + '</bdi>' : ''), p[3], p[4]); }).join('') + '</div>' +
       '<div class="subhead">בדיקה ויזואלית — קבל מתח גבוה</div>' +
       itemList(CAP_CHECKLIST, c.checklist, bp + '.checklist') +
       '<div class="subhead">מדידות (אופציונלי)</div>' +
-      '<div class="grid2">' + CAP_MEAS.map(function (m) { return f(m[0], m[1], 'decimal'); }).join('') + '</div>' +
+      '<div class="grid2">' + CAP_MEAS.map(function (m) { return f(m[0], m[1], '', 'num'); }).join('') + '</div>' +
       compactSectionNotesField(bp + '.sectionNotes', c.sectionNotes) +
       (i === total - 1 ? '<button type="button" class="add-btn" data-addrow="hvCapacitors|' + escapeAttr(JSON.stringify(makeCap())) + '">+ הוסף קבל מתח גבוה</button>' : '') +
       '</div></section>';
