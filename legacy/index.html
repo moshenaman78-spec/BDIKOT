@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Shaked Test Reports</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="application-name" content="Shaked Test Reports">
+<meta name="apple-mobile-web-app-title" content="Shaked Reports">
+<meta name="theme-color" content="#ffffff">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="css/style.css?v=2.2.552">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&display=swap">
+<link rel="stylesheet" href="css/redesign.css?v=2.2.552">
+<link rel="stylesheet" href="css/redesign-light.css?v=2.2.552" id="rdLightCss">
+<script>
+  /* redesign: תתי-כותרות פתוחות תמיד + מצב בהיר/כהה שנשמר במכשיר */
+  window.RD_FLAT_SUBHEADS = true;
+  try{ if(localStorage.getItem('rdTheme') === 'dark') document.getElementById('rdLightCss').disabled = true; }catch(e){}
+</script>
+</head>
+<body>
+
+<script type="application/json" id="embedded-state"></script>
+<div class="pdf-overlay" id="pdfOverlay"><div class="spinner"></div><span>מכין קובץ להורדה…</span></div>
+<iframe id="directPrintFrame" style="position:absolute; width:0; height:0; border:none; visibility:hidden;" title="הכנת הדפסה"></iframe>
+
+<header class="top">
+  <div class="row1">
+    <h1 id="headerTitle" style="cursor:pointer;"><span class="bolt">⚡</span> <span id="headerTitleText">טיפול מתח גבוה עבור ממירי SMA</span> <span class="version-badge" id="versionBadge"></span></h1>
+    <span class="save-pill" id="savePill">טוען…</span>
+  </div>
+  <div class="tab-row">
+    <button type="button" class="tab-btn" id="tabInspection">טופס בדיקה</button>
+    <button type="button" class="tab-btn" id="tabSettings">⚙️ הגדרות חברה</button>
+    <button type="button" class="tab-btn" id="tabDrafts">📁 דוחות טיוטה בענן</button>
+    <button type="button" class="tab-btn" id="tabClients">🗂️ לקוחות</button>
+    <button type="button" class="tab-btn" id="tabToolbox">🎨 ארגז כלים</button>
+  </div>
+  <div id="headerReportTypeWrap"></div>
+</header>
+
+<main id="app"></main>
+
+<footer class="bar report-toolbar">
+  <button id="btnClear" class="danger">התחלה חדשה</button>
+  <button id="btnSaveDraft">💾 שמור</button>
+  <button id="btnSummary">סיכום ליקויים</button>
+  <button id="btnPdf">👁️ תצוגה מקדימה</button>
+  <button id="btnExportBackup">⬇️ ייצוא גיבוי</button>
+  <label id="btnImportBackupLabel" class="footer-file-label">⬆️ ייבוא גיבוי
+    <input type="file" accept=".json" id="importBackupInput" style="display:none;">
+  </label>
+  <button id="btnToggleLanguage">🌐 שפת הדוח</button>
+  <button id="btnTextReview">🔍 בדוק את כל הדוח</button>
+  <button id="btnUndoTextReview" style="display:none;">↩️ בטל תיקוני כתיב</button>
+  <label id="btnToggleTOC" class="footer-file-label" style="cursor:pointer;">
+    <input type="checkbox" id="tocCheckbox" style="margin-inline-end:4px;">📑 תוכן עניינים בדוח
+  </label>
+  <label id="btnToggleElectricianDecl" class="footer-file-label" style="cursor:pointer;">
+    <input type="checkbox" id="electricianDeclCheckbox" style="margin-inline-end:4px;">⚡ הצג הצהרת חשמלאי מבצע
+  </label>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<div class="preview-modal" id="previewModal">
+  <div class="preview-modal-inner">
+    <div class="preview-modal-header">
+      <h3>תצוגה מקדימה ובחירת תוכן</h3>
+      <button type="button" id="previewClose">✕</button>
+    </div>
+    <div class="preview-modal-body">
+      <div class="preview-sidebar" id="previewSidebar"></div>
+      <div class="preview-frame-wrap">
+        <iframe id="previewFrame" title="תצוגה מקדימה של הדוח"></iframe>
+      </div>
+    </div>
+    <div class="preview-modal-footer" style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" id="previewShareBtn" style="flex:1; min-width:160px;">📤 שתף כקובץ (וואטסאפ / מייל)</button>
+      <button type="button" id="previewImageExportBtn" style="flex:1; min-width:160px;" title="חלופה פשוטה יותר ל-PDF — תלויה בספרייה אחת בלבד">🖼️ ייצא כתמונה (PNG)</button>
+      <button type="button" id="previewDownloadBtn" style="flex:1; min-width:160px;">✅ הכל בסדר — המשך לשליחה/שמירה</button>
+      <button type="button" id="btnOpenFireberryFinalize" style="flex:1; min-width:160px;">🔗 סיום ושליחה (Fireberry)</button>
+    </div>
+  </div>
+</div>
+
+<div class="preview-modal" id="formTypeModal">
+  <div class="preview-modal-inner form-type-modal-inner">
+    <div class="preview-modal-header">
+      <h3>בחר סוג טופס בדיקה</h3>
+      <button type="button" id="formTypeClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="formTypeOptionsWrap"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="soilHelpModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner">
+    <div class="preview-modal-header">
+      <h3>❓ עזרה — בדיקת התנגדות סגולית של הקרקע</h3>
+      <button type="button" id="soilHelpClose">✕</button>
+    </div>
+    <div class="form-type-modal-body soil-help-body" id="soilHelpBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="dcDetailsModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner">
+    <div class="preview-modal-header">
+      <h3>⚙ פרטי בדיקה מורחבים</h3>
+      <button type="button" id="dcDetailsClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="dcDetailsBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="textReviewModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner">
+    <div class="preview-modal-header">
+      <h3>🔤 שגיאות כתיב שנמצאו</h3>
+      <button type="button" id="textReviewClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="textReviewBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="aiConclusionModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner">
+    <div class="preview-modal-header">
+      <h3 id="aiConclusionTitle">✨ הצעת AI</h3>
+      <button type="button" id="aiConclusionClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="aiConclusionBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="fatReviewModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:640px; max-height:85vh;">
+    <div class="preview-modal-header">
+      <h3>📄 סקירת נתונים מתעודת FAT</h3>
+      <button type="button" id="fatReviewClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="fatReviewBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="appConfirmModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:420px;">
+    <div class="preview-modal-header">
+      <h3>⚠️ אישור נדרש</h3>
+    </div>
+    <div class="form-type-modal-body">
+      <p id="appConfirmMessage" style="font-size:13.5px; line-height:1.6; margin:0 0 16px;"></p>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="add-panel-card" id="appConfirmOk" style="flex:1;">✓ אישור</button>
+        <button type="button" class="del-panel-btn" id="appConfirmCancel" style="flex:1;">✕ ביטול</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="preview-modal" id="appUpdateModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:440px;">
+    <div class="preview-modal-header">
+      <h3>🔄 עדכון זמין למערכת</h3>
+    </div>
+    <div class="form-type-modal-body">
+      <p style="font-size:13px; color:var(--text-dim); margin:0 0 10px;">גרסה חדשה <b id="appUpdateVersionLabel"></b> זמינה. העדכון כולל:</p>
+      <div id="appUpdateNotesBody" style="font-size:12.5px; line-height:1.6; max-height:220px; overflow-y:auto; background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px; margin-bottom:16px;"></div>
+      <p style="font-size:11.5px; color:var(--text-dim); margin:0 0 12px;">העדכון ירענן את הדף. שינויים שלא נשמרו יישמרו אוטומטית קודם.</p>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="add-panel-card" id="appUpdateOk" style="flex:1;">✓ עדכן עכשיו</button>
+        <button type="button" class="del-panel-btn" id="appUpdateLater" style="flex:1;">מאוחר יותר</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="preview-modal" id="cloudConflictModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:480px; height:auto;">
+    <div class="preview-modal-header">
+      <h3>⚠️ הדוח עודכן ממכשיר אחר מאז שפתחת אותו</h3>
+      <button type="button" id="cloudConflictClose">✕</button>
+    </div>
+    <div class="form-type-modal-body">
+      <p style="font-size:13px; color:var(--text-dim); margin-top:0;">
+        הדוח עודכן ממכשיר אחר מאז שפתחת אותו. השמירה שלך לא בוצעה ושום דבר לא נדרס —
+        בחר איך להמשיך:
+      </p>
+      <button type="button" class="add-btn" id="cloudConflictLoadCloud" style="width:100%; margin-bottom:8px; text-align:right;">
+        ☁️ טען את גרסת הענן<br><span style="font-size:11px; color:var(--text-dim); font-weight:400;">מחליף את מה שרשום כאן בגרסה העדכנית מהענן. השינויים שעשית כאן יאבדו.</span>
+      </button>
+      <button type="button" class="add-btn" id="cloudConflictSaveAsNew" style="width:100%; margin-bottom:8px; text-align:right;">
+        📄 שמור את הגרסה שלי כעותק נפרד<br><span style="font-size:11px; color:var(--text-dim); font-weight:400;">שומר את מה שערכת כאן כדוח חדש ונפרד (מספר חדש), בלי לדרוס את הגרסה בענן.</span>
+      </button>
+      <button type="button" class="add-btn" id="cloudConflictCompare" style="width:100%; margin-bottom:8px; text-align:right;">
+        🔍 השווה שינויים<br><span style="font-size:11px; color:var(--text-dim); font-weight:400;">מציג אילו שדות שונים בין הגרסה שלך לגרסה בענן. לא משנה ולא שומר כלום.</span>
+      </button>
+      <div id="cloudConflictDiff" style="display:none; margin-bottom:8px;"></div>
+      <button type="button" class="del-panel-btn" id="cloudConflictCancel" style="width:100%;">ביטול — המשך לערוך, אל תשמור כרגע</button>
+    </div>
+  </div>
+</div>
+
+<div class="preview-modal" id="calibrationWarningModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:440px;">
+    <div class="preview-modal-header">
+      <h3 id="calibrationWarningTitle">⚠️ תוקף כיול מכשירים</h3>
+    </div>
+    <div class="form-type-modal-body">
+      <div id="calibrationWarningBody" style="font-size:12.5px; line-height:1.7; max-height:320px; overflow-y:auto;"></div>
+      <button type="button" class="add-panel-card" id="calibrationWarningOk" style="width:100%; margin-top:14px;">הבנתי</button>
+    </div>
+  </div>
+</div>
+
+<div class="preview-modal" id="fireberryUnifiedModal">
+  <div class="fb-unified-inner">
+    <div class="fb-unified-header">
+      <h3 id="fbUnifiedTitle">🔗 קישור הדוח ל-Fireberry</h3>
+      <button type="button" id="fbUnifiedClose" class="fb-unified-close">✕</button>
+    </div>
+    <div class="fb-unified-body" id="fbUnifiedBody"></div>
+    <div class="fb-unified-footer" id="fbUnifiedFooter"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="fireberryMeetingPickerModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:480px;">
+    <div class="preview-modal-header">
+      <h3>📅 בחר זימון מ-Fireberry</h3>
+      <button type="button" id="fireberryMeetingPickerClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="fireberryMeetingPickerBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="clientPickerModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:480px;">
+    <div class="preview-modal-header">
+      <h3>🔍 חיפוש לקוח</h3>
+      <button type="button" id="clientPickerClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="clientPickerBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="clientQuickEditModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:480px;">
+    <div class="preview-modal-header">
+      <h3>✏️ עריכת פרטי לקוח</h3>
+      <button type="button" id="clientQuickEditClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="clientQuickEditBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="insulationAddModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:420px;">
+    <div class="preview-modal-header">
+      <h3>בחר בדיקות בידוד להוספה</h3>
+      <button type="button" id="insulationAddModalClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="insulationAddModalBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="groundingAddModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:420px;">
+    <div class="preview-modal-header">
+      <h3>בחר בדיקות רציפות הארקה להוספה</h3>
+      <button type="button" id="groundingAddModalClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="groundingAddModalBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="additionalTestAddModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:460px; max-height:85vh; display:flex; flex-direction:column;">
+    <div class="preview-modal-header">
+      <h3>בחר סעיפים לבדיקות נוספות</h3>
+      <button type="button" id="additionalTestAddModalClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="additionalTestAddModalBody" style="display:flex; flex-direction:column; min-height:0; flex:1;"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="fireberryDiagnosticModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:560px;">
+    <div class="preview-modal-header">
+      <h3>🔧 אבחון Fireberry</h3>
+      <button type="button" id="fireberryDiagnosticClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="fireberryDiagnosticBody"></div>
+  </div>
+</div>
+
+<div class="preview-modal" id="fireberryFinalizationModal">
+  <div class="preview-modal-inner form-type-modal-inner soil-help-modal-inner" style="max-width:480px;">
+    <div class="preview-modal-header">
+      <h3>סיום ושליחת הדוח</h3>
+      <button type="button" id="fireberryFinalizeClose">✕</button>
+    </div>
+    <div class="form-type-modal-body" id="fireberryFinalizeBody"></div>
+  </div>
+</div>
+
+<input type="file" accept="image/*" id="itemPhotoHiddenInputGallery" style="display:none;">
+
+<div id="fabContainer" style="position:fixed; bottom:22px; right:18px; z-index:200;">
+  <div id="fabMenu" style="display:none; flex-direction:column; gap:8px; margin-bottom:10px; align-items:flex-end;">
+    <button type="button" id="fabSave" title="שמור" style="width:48px; height:48px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:20px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;">💾</button>
+    <button type="button" id="fabCollapseAll" title="צמצם הכל" style="width:48px; height:48px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:20px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;">🗇</button>
+    <button type="button" id="fabScrollUp" title="גלול למעלה" style="width:48px; height:48px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:20px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;">⬆️</button>
+    <button type="button" id="fabScrollDown" title="גלול למטה" style="width:48px; height:48px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:20px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center;">⬇️</button>
+  </div>
+  <button type="button" id="fabMainBtn" title="פעולות מהירות" style="width:56px; height:56px; border-radius:50%; border:none; background:var(--amber); color:#1a1a1a; font-size:24px; cursor:pointer; box-shadow:0 3px 14px rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; transition:transform 0.2s;">☰</button>
+</div>
+
+<!-- ========== נגישות + מסמכים משפטיים (תקנון/הצהרת נגישות) ========== -->
+<div id="legalFooterLinks">
+  <button type="button" id="btnOpenTerms">📄 תקנון שימוש</button>
+  <button type="button" id="btnOpenAccessibilityStatement">♿ הצהרת נגישות</button>
+  <button type="button" id="a11yFooterLinkBtn">🔧 נגישות</button>
+</div>
+
+<div class="legal-modal" id="termsModal">
+  <div class="legal-modal-inner">
+    <button type="button" class="legal-modal-close" id="termsModalClose">✕</button>
+    <h2>תקנון שימוש – Shaked Test Reports</h2>
+    <div class="legal-draft-notice">⚠️ זהו נוסח בסיסי/טיוטה. הטקסט אינו מהווה ייעוץ משפטי ואינו מחייב את החברה עד לבדיקה ואישור על ידי עורך דין / גורם מוסמך מטעם החברה.</div>
+    <h3>1. כללי</h3>
+    <p>תקנון זה מסדיר את תנאי השימוש במערכת Shaked Test Reports ("המערכת"), המופעלת על ידי שקד הנדסת חשמל בע"מ ("החברה"). השימוש במערכת מהווה הסכמה לתנאים המפורטים להלן.</p>
+    <h3>2. מטרת המערכת</h3>
+    <p>המערכת נועדה לסייע לבודקים ולמהנדסי חשמל מוסמכים בתיעוד, מילוי והפקת דוחות בדיקה מקצועיים בתחום החשמל.</p>
+    <h3>3. שימוש מורשה</h3>
+    <p>המערכת מיועדת לשימוש על ידי אנשי מקצוע מוסמכים בלבד, בהתאם להכשרתם ולהרשאות הרלוונטיות על פי חוק החשמל ותקנותיו.</p>
+    <h3>4. אחריות המשתמש להזנת נתונים נכונים</h3>
+    <p>המשתמש אחראי באופן בלעדי לנכונות, לדיוק ולשלמות הנתונים שהוא מזין למערכת, לרבות תוצאות בדיקה, מדידות ומסקנות מקצועיות. המערכת היא כלי טכני לתיעוד והפקת דוחות בלבד, ואינה מחליפה שיקול דעת מקצועי.</p>
+    <h3>5. שמירת מידע וגיבויים</h3>
+    <p>המערכת מספקת מנגנוני שמירה מקומית ולעיתים שמירה בענן, בהתאם להגדרות המשתמש. מומלץ למשתמש לשמור גיבויים עצמאיים נוספים של דוחות חשובים.</p>
+    <h3>6. שימוש בדוחות מקצועיים</h3>
+    <p>הדוחות המופקים במערכת הם מסמכים מקצועיים שאחריות תוכנם חלה על הבודק/המהנדס שהפיק אותם, ולא על המערכת עצמה.</p>
+    <h3>7. קניין רוחני</h3>
+    <p>כל הזכויות במערכת, בקוד, בעיצוב ובתבניות הדוחות שמורות לחברה, אלא אם צוין אחרת.</p>
+    <h3>8. הגבלת אחריות</h3>
+    <p>המערכת מסופקת "כפי שהיא" (AS IS). החברה אינה אחראית לנזקים עקיפים או תוצאתיים הנובעים משימוש במערכת, לרבות אך לא רק תקלות טכניות, אובדן נתונים או שגיאות בדוחות שמקורן בהזנת נתונים שגויה על ידי המשתמש.</p>
+    <h3>9. אבטחת מידע</h3>
+    <p>החברה נוקטת אמצעים סבירים להגנה על המידע הנשמר במערכת, אך אינה יכולה להתחייב להגנה מוחלטת מפני כל אירוע אבטחה.</p>
+    <h3>10. פרטיות</h3>
+    <p>המידע המוזן למערכת משמש לצורך הפקת דוחות בדיקה ואינו מועבר לצדדים שלישיים, למעט ככל שנדרש לצורך תפעול המערכת (כגון שירותי אחסון ענן).</p>
+    <h3>11. שינויים במערכת</h3>
+    <p>החברה רשאית לעדכן את המערכת ואת תקנון זה מעת לעת. המשך השימוש לאחר עדכון מהווה הסכמה לתנאים המעודכנים.</p>
+    <h3>12. יצירת קשר</h3>
+    <p id="termsContactBlock">לפניות בנוגע לתקנון זה: <span id="termsContactName"></span> · <span id="termsContactPhone"></span> · <span id="termsContactEmail"></span></p>
+  </div>
+</div>
+
+<div class="legal-modal" id="accessibilityStatementModal">
+  <div class="legal-modal-inner">
+    <button type="button" class="legal-modal-close" id="accessibilityStatementModalClose">✕</button>
+    <h2>הצהרת נגישות</h2>
+    <div class="legal-draft-notice">⚠️ ההצהרה הותאמה בהתאם לעקרונות הנגישות שנבדקו (ת"י 5568 / WCAG 2.x רמה AA). אין באמור לעיל כדי להוות הצהרה משפטית סופית על עמידה מלאה בדרישות החוק — הצהרה כזו תעודכן רק לאחר אימות מקצועי מלא על ידי בודק נגישות מוסמך.</div>
+    <h3>מחויבות החברה לנגישות</h3>
+    <p>שקד הנדסת חשמל בע"מ פועלת להנגשת מערכת Shaked Test Reports עבור משתמשים עם מוגבלויות, מתוך אמונה בזכות השווה לשימוש בשירותים דיגיטליים.</p>
+    <h3>התקן והנחיות</h3>
+    <p>ההתאמות במערכת בוצעו תוך התייחסות לעקרונות תקן ישראלי ת"י 5568 (בהתבסס על WCAG 2.x) ברמה AA.</p>
+    <h3>פירוט התאמות הנגישות במערכת</h3>
+    <ul>
+      <li>ניווט באמצעות מקלדת (Tab, Shift+Tab, Enter, Space, Escape)</li>
+      <li>תמיכה חלקית בקוראי מסך, ככל שמבנה האפליקציה מאפשר</li>
+      <li>הקפדה על ניגודיות צבעים</li>
+      <li>אפשרות להגדלת/הקטנת גודל הטקסט</li>
+      <li>טקסט חלופי (alt) לתמונות ככל הניתן</li>
+      <li>Focus גלוי וברור לאלמנטים הניתנים לבחירה</li>
+      <li>שדות טופס עם תוויות (Labels)</li>
+      <li>התאמה למסכים בגדלים שונים (מובייל/טאבלט/דסקטופ)</li>
+      <li>אפשרות למצב ניגודיות גבוהה ולביטול אנימציות</li>
+    </ul>
+    <h3>מגבלות נגישות ידועות</h3>
+    <p>המערכת נמצאת בתהליך שיפור נגישות מתמשך. ייתכנו אזורים מסוימים (בעיקר טבלאות נתונים מורכבות ואזורי עריכה דינמיים) שטרם עברו התאמה מלאה. אנו פועלים לשיפור מתמיד.</p>
+    <h3>רכז נגישות ודרך ליצירת קשר</h3>
+    <p id="a11yContactBlock">
+      <span id="a11yContactName"></span><br>
+      טלפון: <span id="a11yContactPhone"></span><br>
+      דוא"ל: <span id="a11yContactEmail"></span><br>
+      כתובת: <span id="a11yContactAddress"></span>
+    </p>
+    <p>ניתן לדווח על כל בעיית נגישות שנתקלתם בה באמצעות פרטי הקשר שלעיל, ואנו נשתדל לטפל בפנייה בהקדם האפשרי.</p>
+    <h3>תאריך עדכון אחרון</h3>
+    <p id="a11yStatementDate">16.9.2026</p>
+  </div>
+</div>
+
+<button type="button" id="a11yToggleBtn" title="תפריט נגישות" aria-haspopup="true" aria-expanded="false">♿</button>
+<div id="a11yMenu" role="menu" aria-label="אפשרויות נגישות">
+  <h3>♿ נגישות</h3>
+  <button type="button" data-a11y-action="font-inc" aria-pressed="false">הגדלת טקסט <span>A+</span></button>
+  <button type="button" data-a11y-action="font-dec" aria-pressed="false">הקטנת טקסט <span>A-</span></button>
+  <button type="button" data-a11y-action="contrast" aria-pressed="false">ניגודיות גבוהה <span>◐</span></button>
+  <button type="button" data-a11y-action="underline" aria-pressed="false">הדגשת קישורים <span>U</span></button>
+  <button type="button" data-a11y-action="spacing" aria-pressed="false">מרווחי טקסט <span>↕</span></button>
+  <button type="button" data-a11y-action="readable-font" aria-pressed="false">פונט קריא <span>Aa</span></button>
+  <button type="button" data-a11y-action="reduce-motion" aria-pressed="false">ביטול אנימציות <span>⏸</span></button>
+  <button type="button" id="a11yResetBtn" data-a11y-action="reset">↺ איפוס כל ההגדרות</button>
+</div>
+
+<script src="js/app.js?v=2.2.552"></script>
+<script src="js/nav.js?v=2.2.552"></script>
+<script src="js/sync-fix.js?v=2.2.552-sync1"></script>
+<script src="js/sma-capacitor.js?v=2.2.552-cap1"></script>
+<script src="js/sma-smooth.js?v=2.2.552-smooth1"></script>
+<script>
+  // רישום Service Worker — נדרש לקריטריון ההתקנה (Installability) של Chrome/Edge, כדי
+  // שהאפליקציה תיפתח כחלון Standalone עצמאי ב-Windows במקום טאב דפדפן רגיל. script נפרד
+  // ומבודד לגמרי מ-app.js, בכוונה — לא נוגע בשום לוגיקה קיימת של דוחות/Supabase/Fireberry.
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js').catch(() => {
+        // כישלון ברישום ה-SW לא אמור לחסום את האפליקציה בשום צורה — היא ממשיכה לעבוד
+        // רגיל כאתר, פשוט לא תוצע להתקנה כ-PWA באותו מקרה.
+      });
+    });
+  }
+</script>
+</body>
+</html>

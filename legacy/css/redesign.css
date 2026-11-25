@@ -1,0 +1,574 @@
+/* ============================================================
+   Shaked Test Reports — שכבת עיצוב משותפת (redesign) — פריסה וגדלים
+   בלתי-תלוי בערכת צבעים: משתמש רק במשתנים. צבעי המצב הבהיר ב-redesign-light.css
+   (מצב כהה = redesign-light.css מושבת, וחוזרים משתני הצבע המקוריים של style.css).
+   חשוב: font-size של שדות הקלט נשאר 14.5px (v2.426 — מקלדת iPad).
+   ============================================================ */
+:root{
+  --radius:14px;
+  --rd-nav-w:280px;
+  --rd-tap:48px;
+  /* ברירות מחדל למצב כהה (נדרסות במצב בהיר) */
+  --navy:#0d1114;
+  --rd-row-bg:#1d2328;
+  --rd-row-line:#333c43;
+  --rd-pending-bg:#2a2412;
+  --rd-pending-line:#6b5a1f;
+  --rd-sub-bg:#242b31;
+  --rd-sub-line:#333c43;
+  --rd-sub-text:var(--amber);
+  --rd-btn-bg:#101417;
+  --rd-btn-text:var(--text);
+  --rd-btn-line:var(--line);
+}
+body{font-family:'Heebo','Segoe UI',Tahoma,Arial,sans-serif;}
+
+/* ---------- כותרת וטאבים ---------- */
+.tab-row{gap:8px; margin-top:10px;}
+.tab-btn{font-size:14px; padding:8px 12px; min-height:44px; border-radius:10px;}
+
+/* ---------- כרטיסים ---------- */
+main{padding:18px 24px 30px;}
+section.card{border-radius:var(--radius); margin-bottom:16px; scroll-margin-top:12px;}
+.card-head{padding:0 18px; min-height:62px;}
+.card-head h2{font-size:18px; font-weight:800; gap:10px;}
+.card-head .num{
+  display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:34px; padding:0 6px;
+  border-radius:10px; background:var(--navy); color:#fff; font-size:14px; opacity:1; font-weight:800;
+}
+.card-head .chev{color:var(--amber); font-size:18px;}
+.card-body{padding:18px 20px 22px;}
+.collapse-bottom-btn{min-height:var(--rd-tap); font-size:14px;}
+
+/* פריטים חוזרים — פס כהה */
+section.card:has(> .card-head .del-panel-btn) > .card-head,
+section.card[data-key^="panel-"] > .card-head{background:var(--navy); color:#fff;}
+section.card:has(> .card-head .del-panel-btn) > .card-head h2,
+section.card[data-key^="panel-"] > .card-head h2{color:#fff;}
+section.card:has(> .card-head .del-panel-btn) > .card-head .num,
+section.card[data-key^="panel-"] > .card-head .num{background:#fff; color:var(--navy);}
+section.card:has(> .card-head .del-panel-btn) > .card-head .chev,
+section.card[data-key^="panel-"] > .card-head .chev{color:#fff;}
+.del-panel-btn{min-height:44px; min-width:44px; padding:0 12px; border-radius:9px; font-size:13.5px; font-weight:700; cursor:pointer;}
+section.card:has(> .card-head .del-panel-btn) > .card-head .del-panel-btn{background:rgba(255,255,255,.12); color:#fff; border:1px solid rgba(255,255,255,.35);}
+
+/* ---------- תתי-כותרות: כותרת קבועה, לא מתקפלת (רמת קיפול אחת) ---------- */
+.subhead{
+  font-size:15px; letter-spacing:0; text-transform:none; opacity:1; color:var(--rd-sub-text);
+  background:var(--rd-sub-bg); border:1px solid var(--rd-sub-line); border-radius:10px;
+  padding:10px 12px; margin:22px 0 10px; min-height:44px; cursor:pointer;
+}
+.subhead::after{color:var(--amber); font-size:14px;}
+/* בטופס הבדיקה בלבד: תתי-כותרות קבועות (לא מתקפלות). בהגדרות/לקוחות — מתקפלות כמו קודם */
+body.rd-flat .subhead{cursor:default;}
+body.rd-flat .subhead:hover{background:var(--rd-sub-bg);}
+body.rd-flat .subhead::after{content:none !important;}
+
+/* ---------- שדות ---------- */
+.field label{font-size:13.5px; font-weight:600;}
+input[type=text], input[type=date], input[type=number], textarea, select{border-radius:10px; min-height:44px;}
+textarea{min-height:64px;}
+.today-btn{min-height:44px; font-weight:700;}
+/* 3 טורים רק במסך רחב באמת — בטאבלט נשארים 2 טורים כדי ששדות עם יחידה (ערך|יחידה) לא יימעכו */
+@media (min-width:1400px){
+  .grid2{grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px 16px;}
+}
+.grid2{gap:12px 16px;}
+
+/* ---------- צ'קליסטים: יעדי מגע 48px ---------- */
+.item-row{padding:8px 10px; border:1px solid var(--rd-row-line); border-radius:10px; margin-bottom:6px; background:var(--rd-row-bg); gap:12px;}
+.item-row:last-child{border-bottom:1px solid var(--rd-row-line);}
+.item-row .lbl{font-size:15px;}
+.item-row:not(:has(.status-btn.active)){background:var(--rd-pending-bg); border-color:var(--rd-pending-line);}
+.status-group{gap:6px;}
+.status-btn{
+  min-height:var(--rd-tap); min-width:64px; padding:6px 12px; border-radius:10px; font-size:14.5px; font-weight:700;
+  background:var(--rd-btn-bg); color:var(--rd-btn-text); border-color:var(--rd-btn-line);
+}
+.status-btn.ok.active{background:var(--ok); border-color:var(--ok); color:#fff;}
+.status-btn.bad.active{background:#9A3412; border-color:#9A3412; color:#fff;}
+.status-btn.na.active{background:#475569; border-color:#475569; color:#fff;}
+.item-photo-btn{min-height:var(--rd-tap); min-width:var(--rd-tap); border-radius:10px; background:var(--rd-btn-bg); color:var(--rd-btn-text); border-color:var(--rd-btn-line);}
+.item-photo-btn.has-photos{border-color:var(--amber); color:var(--amber);}
+
+/* "סמן את השאר תקין" (נוסף ע"י js/nav.js) */
+.rd-bulk{display:flex; align-items:center; gap:10px; margin:0 0 8px; flex-wrap:wrap;}
+.rd-bulk button{
+  min-height:var(--rd-tap); padding:0 16px; border-radius:10px; font-size:14.5px; font-weight:700; cursor:pointer;
+  background:transparent; color:var(--ok); border:2px solid var(--ok); font-family:inherit;
+}
+.rd-bulk span{font-size:13.5px; color:var(--text-dim);}
+
+/* חלקים אופציונליים (נוסף ע"י js/nav.js) */
+.rd-opt{display:flex; align-items:center; gap:10px; cursor:pointer; flex:1;}
+.rd-opt input{width:24px; height:24px; accent-color:var(--amber); margin:0; flex-shrink:0;}
+.rd-opt-state{font-size:12.5px; font-weight:700; padding:2px 8px; border-radius:999px;}
+.rd-opt-on .rd-opt-state{background:var(--ok); color:#fff;}
+.rd-opt-off .rd-opt-state{background:var(--rd-btn-line); color:var(--text);}
+.subhead.rd-opt-off{opacity:.85;}
+.rd-opt-hidden{display:none !important;}
+
+/* ---------- טבלאות ---------- */
+.ins-table th{font-size:13px;}
+.ins-table td.lbl-cell{font-size:13.5px;}
+.add-btn{min-height:var(--rd-tap); border-radius:10px; font-size:14.5px; font-weight:700;}
+footer.bar button, footer.bar .footer-file-label{font-size:13.5px; min-height:44px; border-radius:10px;}
+
+/* ---------- מחוון שמירה בולט (צף, גלוי תמיד) ---------- */
+#savePill{
+  position:fixed; bottom:22px; left:84px; z-index:120; max-width:calc(100vw - 180px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-size:14px; font-weight:700; padding:9px 18px; border-radius:999px; border-width:2px;
+  background:var(--panel); box-shadow:0 4px 16px rgba(0,0,0,.18); pointer-events:none;
+}
+#savePill.saved{background:var(--ok); color:#fff; border-color:var(--ok);}
+#savePill.saved::before{content:'✓ ';}
+#savePill.saved[data-ago]::after{content:' · ' attr(data-ago); font-weight:500;}
+#savePill.offline{background:var(--bad-bg);}
+
+/* ---------- מתג בהיר/כהה ---------- */
+#rdThemeBtn{
+  min-height:40px; padding:0 14px; border-radius:999px; font-size:13.5px; font-weight:700; cursor:pointer;
+  background:transparent; border:1px solid rgba(255,255,255,.35); color:inherit; font-family:inherit;
+}
+
+/* ---------- תפריט ניווט מהיר ---------- */
+#rdNav{display:none;}
+@media (min-width:1000px){
+  header.top{position:relative;}
+  body.rd-has-nav #rdNav{
+    display:flex; flex-direction:column; gap:4px;
+    position:fixed; right:0; bottom:0; width:var(--rd-nav-w); top:var(--rd-top, 120px);
+    background:var(--panel); border-left:1px solid var(--line); padding:12px 10px 90px; overflow-y:auto; z-index:40; box-sizing:border-box;
+  }
+  body.rd-has-nav main#app, body.rd-has-nav footer.bar{margin-right:var(--rd-nav-w); width:auto; max-width:none;}
+}
+#rdNav .rd-nav-title{font-size:12.5px; font-weight:700; color:var(--text-dim); padding:6px 10px 4px;}
+#rdNav button{
+  display:flex; align-items:center; gap:10px; width:100%; min-height:52px; padding:6px 10px; border-radius:10px;
+  background:transparent; border:1px solid transparent; text-align:right; cursor:pointer; color:var(--text); font-family:inherit;
+}
+#rdNav button:hover{background:var(--panel2);}
+#rdNav button.rd-active{background:var(--panel2); border-color:var(--amber);}
+#rdNav .rd-num{
+  width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  background:var(--panel2); color:var(--text); border:1px solid var(--line); font-size:12.5px; font-weight:700;
+}
+#rdNav button.rd-rep .rd-num{background:var(--navy); color:#fff; border-color:var(--navy);}
+#rdNav button.rd-done .rd-num{background:var(--ok); color:#fff; border-color:var(--ok);}
+#rdNav .rd-body{flex:1; min-width:0; display:flex; flex-direction:column; gap:4px;}
+#rdNav .rd-name{font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+#rdNav .rd-meta{display:flex; align-items:center; gap:6px;}
+#rdNav .rd-bar{flex:1; height:4px; background:var(--line); border-radius:999px; overflow:hidden;}
+#rdNav .rd-bar i{display:block; height:4px; background:var(--amber); border-radius:999px;}
+#rdNav .rd-count{font-size:12px; color:var(--text-dim); white-space:nowrap;}
+
+/* טלפון וטאבלט צר */
+@media (max-width:999px){
+  header.top{position:relative; padding:8px 10px;}
+  header.top h1{font-size:15.5px;}
+  .tab-row{gap:5px; margin-top:8px;}
+  .tab-btn{font-size:12px; min-height:36px; padding:5px 6px; flex:1 1 18%; min-width:64px;}
+  .card-head{padding:0 14px; min-height:56px;}
+  .card-head h2{font-size:16px;}
+  .card-body{padding:14px 14px 18px;}
+  .item-row{flex-wrap:wrap; gap:8px;}
+  .item-row .lbl{flex:1 1 100%;}
+  .item-row .status-group{flex:1 1 auto;}
+  .item-row .status-btn{flex:1; min-width:0;}
+  #savePill{left:76px; bottom:20px; font-size:13px; padding:8px 14px;}
+}
+
+/* תיקון: כפתור (למשל "רענן") בשורת flex ליד שדה חיפוש — לא לתפוס 100% ולמעוך את השדה
+   (שדה החיפוש במסך הלקוחות נמעך לרוחב אפס והטקסט הוצג אות מתחת לאות) */
+#app div[style*="display:flex"] > .add-btn,
+#app div[style*="display: flex"] > .add-btn{width:auto; flex:0 0 auto; white-space:nowrap; margin-top:0; min-height:44px;}
+#app div[style*="display:flex"] > .field[style*="flex:1"],
+#app div[style*="display: flex"] > .field[style*="flex:1"]{min-width:180px;}
+@media (max-width:999px){
+  .ins-table th{font-size:11px;}
+  .ins-table td.lbl-cell{font-size:11.5px;}
+}
+
+/* טלפון: טבלאות רגילות בתוך כרטיס — גלילה אופקית במקום מעיכת עמודת התווית */
+@media (max-width:999px){
+  #app .card-body table:not(.dc-table):not(.ins-table){display:block; overflow-x:auto; max-width:100%;}
+  #app .card-body table:not(.dc-table):not(.ins-table) td:first-child{min-width:110px;}
+}
+/* בחירת יחידה (MΩ / kA / Ω...) — רוחב מינימלי כדי שהטקסט לא ייחתך */
+#app select{min-width:66px;}
+
+/* מספר גרסת העיצוב — מוצג ליד מספר הגרסה בכותרת, כדי לדעת איזו גרסה עלתה (לעדכן בכל גרסה) */
+#versionBadge::after{content:' · עיצוב חדש';}
+
+/* ---------- מיתוג בכותרת: שם המוצר (ימין) + לוגו החברה הבודקת (שמאל) — בלי להגדיל את הכותרת ---------- */
+header.top .row1{align-items:center; gap:14px;}
+header.top .row1 h1{flex:1; min-width:0; font-size:15px; font-weight:600; opacity:.9;}
+header.top .row1 h1 .bolt{display:none;}
+#rdBrand{display:flex; align-items:baseline; gap:7px; flex-shrink:0; padding-left:14px; border-left:1px solid rgba(255,255,255,.25); line-height:1;}
+#rdBrand .rd-brand-mark{color:#F6B34A; font-size:17px; align-self:center;}
+#rdBrand .rd-brand-name{font-family:'Heebo','Segoe UI',Arial,sans-serif; font-weight:800; font-size:19px; letter-spacing:3px; color:#fff;}
+#rdBrand .rd-brand-sub{font-weight:500; font-size:10.5px; letter-spacing:2.5px; color:#A9C6E4;}
+/* לוגו החברה הבודקת — כרטיס לבן רחב כמו ב-VLF (לוגו + שורת תיאור אם היא חלק מהתמונה) */
+#rdClientLogo{height:52px; display:flex; align-items:center; background:#fff; border-radius:10px; padding:4px 12px; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.18);}
+#rdClientLogo img{max-height:44px; max-width:340px; width:auto; height:auto; display:block; object-fit:contain;}
+@media (max-width:999px){
+  #rdBrand{padding-left:10px;}
+  #rdBrand .rd-brand-name{font-size:16px; letter-spacing:2px;}
+  #rdBrand .rd-brand-sub{display:none;}
+  #rdClientLogo{height:36px; padding:2px 8px;}
+  #rdClientLogo img{max-height:30px; max-width:120px;}
+  #rdThemeBtn{padding:0 10px; font-size:12px; min-height:34px;}
+}
+@media (max-width:999px){
+  header.top .row1{flex-wrap:nowrap; gap:8px;}
+  header.top .row1 h1{flex-wrap:nowrap; white-space:nowrap; overflow:hidden;}
+  #headerTitleText{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+}
+@media (max-width:600px){
+  header.top .row1 h1{font-size:13px;}
+  header.top .row1 h1 .version-badge{display:none;}
+  #rdThemeBtn .rd-tx{display:none;}
+  #rdThemeBtn{padding:0; width:36px; min-height:36px;}
+}
+
+/* ערך + יחידה (דוח קוטביות סטרינגים): הערך מימין, היחידה צמודה משמאל */
+.sp-meas{display:flex; align-items:stretch; gap:0; direction:rtl;}
+.sp-meas input{flex:1 1 auto; min-width:56px; border-top-left-radius:0 !important; border-bottom-left-radius:0 !important;}
+#app .sp-meas select{flex:0 0 auto; min-width:0; width:64px; padding:0 4px; border-top-right-radius:0 !important; border-bottom-right-radius:0 !important; border-right:0; background-color:var(--panel2); font-weight:700; text-align:center;}
+.sp-meas .sp-unit{display:flex; align-items:center; justify-content:center; min-width:34px; padding:0 8px; border:1px solid var(--rd-btn-line); border-right:0; border-radius:10px 0 0 10px; background:var(--panel2); font-weight:700; color:var(--text);}
+section.card[data-key^="sp-dccb-"]{border-color:#2E5074;}
+section.card[data-key^="sp-dccb-"] > .card-head .del-panel-btn:disabled{opacity:.35; cursor:default;}
+/* טלפון: טבלת המעגלים נגללת לצד ברוחב נוח במקום להימעך */
+@media (max-width:999px){ main .dc-table.dc-table-compact.sp-table{min-width:780px;} }
+section.card[data-key^="sp-inv-"]{border-color:#2E5074;}
+section.card[data-key^="sp-inv-"] > .card-head .del-panel-btn:disabled{opacity:.35; cursor:default;}
+/* דוח קוטביות סטרינגים — בחירת סוג הבדיקה */
+.sp-mode-row{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin-bottom:14px;}
+.sp-mode-btn{display:flex; flex-direction:column; gap:4px; align-items:flex-start; text-align:right; min-height:74px; padding:12px 16px; border-radius:12px; border:2px solid var(--line); background:var(--panel); color:var(--text); cursor:pointer; font-family:inherit;}
+.sp-mode-btn b{font-size:16px;}
+.sp-mode-btn span{font-size:13px; color:var(--text-dim);}
+.sp-mode-btn.active{border-color:var(--amber); background:var(--panel2); box-shadow:inset 0 0 0 1px var(--amber);}
+.sp-mode-btn.active b::before{content:'✓ '; color:var(--amber);}
+@media (max-width:600px){ .sp-mode-row{grid-template-columns:1fr;} }
+main .dc-table.dc-table-compact.sp-stor-table{min-width:1570px; width:1570px;}
+.sp-mode-row{grid-template-columns:repeat(3, minmax(0,1fr));}
+@media (max-width:900px){ .sp-mode-row{grid-template-columns:1fr;} }
+main .dc-table.dc-table-compact.sp-ac-table{min-width:1860px; width:1860px;}
+/* חלונית בחירת כבל: כמות | חתך | בידוד */
+.sp-cable{display:flex; gap:6px; align-items:stretch;}
+#app .sp-cable select{min-width:0;}
+#app .sp-cable select:nth-child(1){flex:0 0 64px;}
+#app .sp-cable select:nth-child(2){flex:1 1 90px;}
+#app .sp-cable select:nth-child(3), #app .sp-cable input{flex:1.3 1 110px; min-width:0;}
+
+/* מכולות אגירה / גידי AC — כל שורה מלבן לגובה, שדות פרוסים על כל הרוחב (בלי גלילה לצד) */
+.sp-row-card{border:1px solid var(--line); border-radius:12px; background:var(--panel); margin-bottom:12px; overflow:hidden;}
+.sp-row-card.sp-row-bad{border-color:var(--bad);}
+.sp-row-head{display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--panel2); border-bottom:1px solid var(--line); flex-wrap:wrap;}
+.sp-row-num{min-width:32px; height:32px; border-radius:9px; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800;}
+.sp-row-title{font-weight:700; font-size:15px;}
+.sp-row-cable{font-size:13px; color:var(--text-dim);}
+.sp-row-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px 14px; padding:12px 14px 14px;}
+.sp-row-grid .field{margin-bottom:0;}
+.sp-row-grid .sp-span2{grid-column:span 2;}
+.sp-row-grid .sp-span-all{grid-column:1 / -1;}
+.sp-sub{font-size:13px; font-weight:700; color:var(--navy); border-top:1px dashed var(--line); padding-top:8px; margin-top:2px;}
+@media (max-width:600px){ .sp-row-grid{grid-template-columns:repeat(2, minmax(0,1fr));} .sp-row-grid .sp-span2{grid-column:1 / -1;} }
+/* חלונית תקין / לא תקין */
+#app select.sp-status-sel{font-weight:700;}
+#app select.sp-status-sel.sp-st-ok{background:var(--ok); color:#fff; border-color:var(--ok);}
+#app select.sp-status-sel.sp-st-bad{background:#9A3412; color:#fff; border-color:#9A3412;}
+#app select.sp-status-sel.sp-st-na{background:#475569; color:#fff; border-color:#475569;}
+#app select.sp-status-sel.sp-st-empty{background:var(--rd-pending-bg); border-color:var(--rd-pending-line);}
+
+/* הערות כסעיפים ממוספרים */
+.sp-notes{display:flex; flex-direction:column; gap:8px; margin-bottom:10px;}
+.sp-note-row{display:flex; align-items:flex-start; gap:8px;}
+.sp-note-num{min-width:34px; height:44px; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px; color:var(--navy); background:var(--panel2); border:1px solid var(--line); border-radius:10px;}
+#app .sp-note-row textarea{flex:1; min-height:44px; height:44px; resize:none; overflow:hidden; line-height:1.4; padding:10px 12px;}
+.sp-note-row .del-panel-btn{min-height:44px;}
+.sp-note-row .del-panel-btn:disabled{opacity:.35; cursor:default;}
+
+/* מילוי מהיר — מחולל שורות, תבניות, חריגים, בידוד נמוך */
+.sp-gen{border:2px dashed var(--amber-dim); border-radius:12px; padding:0 14px; margin:4px 0 14px; background:var(--panel2);}
+.sp-gen > summary{cursor:pointer; min-height:48px; display:flex; align-items:center; font-weight:800; color:var(--amber); font-size:15px; list-style:none;}
+.sp-gen > summary::-webkit-details-marker{display:none;}
+.sp-gen[open] > summary{border-bottom:1px solid var(--line); margin-bottom:10px;}
+.sp-gen-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px 14px;}
+.sp-gen-grid .sp-span2{grid-column:span 2;}
+.sp-gen-actions{display:flex; align-items:center; gap:12px; padding:10px 0 14px; flex-wrap:wrap;}
+.sp-gen-actions .add-btn{width:auto; flex:0 0 auto; background:var(--amber); color:#fff; border:0; padding:0 22px;}
+.sp-gen-actions span{font-size:12.5px; color:var(--text-dim);}
+@media (max-width:600px){ .sp-gen-grid .sp-span2{grid-column:1 / -1;} }
+.sp-tpl, .sp-exc{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px;}
+.sp-tpl .add-btn, .sp-exc .add-btn{width:auto; flex:0 0 auto; margin-top:0;}
+#app .sp-tpl select{width:auto; min-width:200px; flex:1 1 200px;}
+.sp-exc-count{font-weight:700; font-size:13.5px; color:var(--ok);}
+.sp-exc-count.has{color:var(--bad);}
+#app input.sp-low{background:#FDECEA !important; border-color:#B42318 !important; color:#B42318 !important; font-weight:800;}
+
+/* ===== כפתור "צמצם / הרחב" במקום החץ הקטן — בכל הדוחות (v2.2.482) =====
+   החץ (.chev) בכותרת כל סעיף הופך לכפתור ברור עם טקסט, גדול לאצבע, ומרוחק מכפתורי מחק/שכפל
+   כדי למנוע לחיצה בטעות. הכותרת כולה ממשיכה לפתוח/לסגור כמו קודם. */
+section.card > .card-head .chev{
+  font-size:0; transform:none !important; flex-shrink:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:44px; min-width:96px; padding:0 14px; margin-inline-start:18px;
+  border-radius:999px; border:2px solid var(--amber); background:var(--panel); color:var(--amber);
+  position:relative; cursor:pointer; user-select:none;
+}
+section.card > .card-head .chev::after{content:'▼ הרחב'; font-size:14px; font-weight:800; white-space:nowrap;}
+section.card.open > .card-head .chev::after{content:'▲ צמצם';}
+section.card.open > .card-head .chev{background:var(--amber); color:#fff;}
+/* קו מפריד בין כפתורי הפעולה (מחק/שכפל) לבין צמצם/הרחב */
+section.card > .card-head .del-panel-btn ~ .chev::before{
+  content:''; position:absolute; inset-inline-end:calc(100% + 9px); top:8px; bottom:8px; width:2px; background:var(--line); border-radius:2px;
+}
+/* על פס כהה (ממיר/מסדר/שנאי/לוח) */
+section.card:has(> .card-head .del-panel-btn) > .card-head .chev,
+section.card[data-key^="panel-"] > .card-head .chev{border-color:#fff; color:#fff; background:transparent;}
+section.card.open:has(> .card-head .del-panel-btn) > .card-head .chev,
+section.card.open[data-key^="panel-"] > .card-head .chev{background:#fff; color:var(--navy);}
+section.card:has(> .card-head .del-panel-btn) > .card-head .del-panel-btn ~ .chev::before{background:rgba(255,255,255,.35);}
+@media (max-width:600px){
+  section.card > .card-head .chev{min-width:78px; padding:0 10px; margin-inline-start:12px;}
+  section.card > .card-head .chev::after{font-size:12.5px;}
+}
+/* תתי-כותרות מתקפלות (הגדרות / לקוחות / טיוטות): גם שם טקסט במקום חץ */
+body:not(.rd-flat) .subhead::after{content:'▼ הרחב'; font-size:12.5px; font-weight:800; padding:4px 12px; border-radius:999px; border:1.5px solid var(--amber); white-space:nowrap;}
+body:not(.rd-flat) .subhead:not(.collapsed)::after{content:'▲ צמצם';}
+/* טלפון: כותרת עם הרבה כפתורים עוברת לשתי שורות במקום להיחתך */
+@media (max-width:600px){
+  section.card > .card-head{flex-wrap:wrap; row-gap:6px; padding-top:8px; padding-bottom:8px;}
+  section.card > .card-head > span:last-child{flex-wrap:wrap; justify-content:flex-end; margin-inline-start:auto;}
+}
+
+/* ===== נגד "קפיצות" המסך (v2.2.484) =====
+   תמונה בכרטיס תמונה הייתה בלי גובה קבוע (max-height בלבד): בכל רענון של הטופס התמונות נטענות
+   מחדש, בהתחלה בגובה 0 ואז 160px — הדף מתכווץ ומתארך והמסך "קופץ". גובה קבוע = פריסה יציבה. */
+.photo-card-img{height:160px; max-height:none; object-fit:cover; background:var(--panel2);}
+img.photo-card-img[src=""], img.photo-card-img:not([src]){visibility:hidden;}
+
+/* ===== תפריט "ניווט מהיר" מתקפל (v2.2.485) =====
+   מצומצם = פס צר בצד ימין עם מספרי הסעיפים בלבד (✓ לסעיף שהושלם); לחיצה על מספר קופצת לסעיף,
+   ומעבר עם העכבר/לחיצה ארוכה מציג את שם הסעיף. הבחירה נשמרת במכשיר. */
+.rd-nav-toggle{
+  display:flex !important; align-items:center; justify-content:center; width:100%; min-height:44px !important;
+  border:1.5px solid var(--amber) !important; border-radius:10px !important; color:var(--amber) !important;
+  background:var(--panel) !important; font-weight:800; font-size:14px; margin-bottom:6px; flex-shrink:0;
+}
+.rd-nav-toggle .rd-tg-closed{display:none;}
+@media (min-width:1000px){
+  body.rd-nav-collapsed{--rd-nav-w:64px;}
+  body.rd-nav-collapsed #rdNav{padding:10px 6px 90px;}
+  body.rd-nav-collapsed #rdNav .rd-nav-title,
+  body.rd-nav-collapsed #rdNav .rd-body{display:none;}
+  body.rd-nav-collapsed #rdNav button[data-rdkey]{justify-content:center; padding:4px 0; min-height:46px;}
+  body.rd-nav-collapsed #rdNav .rd-num{width:34px; height:34px; font-size:13px;}
+  body.rd-nav-collapsed .rd-nav-toggle{font-size:20px; padding:0;}
+  body.rd-nav-collapsed .rd-nav-toggle .rd-tg-open{display:none;}
+  body.rd-nav-collapsed .rd-nav-toggle .rd-tg-closed{display:inline;}
+}
+#rdNav, main#app{transition:width .18s ease, margin .18s ease;}
+
+/* תת-סעיף מתקפל בחלון ממיר */
+.sp-subtoggle{display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--rd-sub-bg); border:1px solid var(--rd-sub-line); border-radius:10px; padding:8px 12px; margin:22px 0 10px; min-height:44px;}
+.sp-subtoggle-title{font-size:15px; font-weight:800; color:var(--rd-sub-text);}
+.sp-subtoggle-sum{font-size:13px; color:var(--text-dim);}
+.sp-subtoggle-btn{margin-inline-start:auto; min-height:40px; min-width:92px; padding:0 14px; border-radius:999px; border:2px solid var(--amber); background:var(--amber); color:#fff; font-weight:800; font-size:13.5px; cursor:pointer; font-family:inherit;}
+.sp-subtoggle.is-collapsed .sp-subtoggle-btn{background:var(--panel); color:var(--amber);}
+
+/* "לכל העמודה ▾" מעל עמודת קוטביות */
+.sp-colhead{display:flex; flex-direction:column; align-items:stretch; gap:4px;}
+#app select.sp-colset{min-height:34px; height:34px; font-size:12.5px; font-weight:800; padding:0 6px; border:1.5px solid var(--amber); color:var(--amber); background:var(--panel); border-radius:8px; min-width:0;}
+.sp-colset-wrap{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--text-dim);}
+#app .sp-colset-wrap select.sp-colset{width:auto;}
+/* כבל מתח גבוה — תמונת אזור הבדיקה בטופס */
+.hc-area-photo{display:flex; align-items:flex-start; gap:10px; margin:6px 0 8px;}
+.hc-area-photo img{max-width:66%; max-height:260px; object-fit:contain; border:1px solid var(--line); border-radius:10px; background:var(--panel2);}
+
+/* כבל מתח גבוה — כבלים בסעיף 02, סוג כבל אוטומטי, חלוניות תקין/לא תקין/לא רלוונטי */
+.hc-def{margin-bottom:12px;}
+.hc-def-head{display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;}
+.hc-def-txt{font-weight:800; color:var(--amber);}
+.hc-auto-cable{min-height:44px; display:flex; align-items:center; padding:0 12px; border-radius:10px; background:var(--panel2); border:1px dashed var(--line); font-weight:700;}
+#app select.hc-sel{font-weight:700;}
+#app select.hc-sel.hc-st-ok{background:var(--ok); color:#fff; border-color:var(--ok);}
+#app select.hc-sel.hc-st-bad{background:#9A3412; color:#fff; border-color:#9A3412;}
+#app select.hc-sel.hc-st-na{background:#475569; color:#fff; border-color:#475569;}
+#app select.hc-sel.hc-st-empty{background:var(--rd-pending-bg); border-color:var(--rd-pending-line);}
+#app select.hc-sel:disabled{opacity:.85;}
+/* כבל מ"ג — שיטות בדיקה + חישובים מתחת לשדות */
+.hc-methods{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; margin-bottom:12px;}
+@media (min-width:1300px){ .hc-methods{grid-template-columns:repeat(3, minmax(0,1fr));} }
+@media (max-width:600px){ .hc-methods{grid-template-columns:1fr;} }
+.hc-calc{font-size:12.5px; color:var(--text-dim); margin-top:-4px;}
+.sp-row-grid .hc-calc{grid-column:auto; margin-top:4px;}
+
+/* פרויקט עם כמה דוחות: בדוח נוסף — סעיף 01 (פרטי המזמין) מוסתר ומוצגת הפניה לדוח הראשון */
+body.rd-secondary-chapter section.card[data-key="meta"]{display:none !important;}
+.rd-shared-meta-note{display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:var(--rd-sub-bg); border:1.5px dashed var(--amber); border-radius:12px; padding:12px 16px; margin-bottom:16px; font-size:14px; font-weight:600;}
+.rd-shared-meta-note button{margin-inline-start:auto; min-height:44px; padding:0 16px; border-radius:10px; border:2px solid var(--amber); background:var(--panel); color:var(--amber); font-weight:800; cursor:pointer; font-family:inherit;}
+.rd-shared-meta-note .rd-chdesc{flex:1 1 100%; display:flex; flex-direction:column; gap:4px; font-size:13px; font-weight:700; color:var(--text-dim);}
+#app .rd-shared-meta-note textarea{min-height:60px;}
+
+/* שורת בדיקה מתקפלת + בדיקת L-N */
+.sp-row-toggle{min-height:40px; min-width:92px; padding:0 14px; margin-inline-start:14px; border-radius:999px; border:2px solid var(--amber); background:var(--amber); color:#fff; font-weight:800; font-size:13.5px; cursor:pointer; font-family:inherit; position:relative;}
+.sp-row-toggle::before{content:''; position:absolute; inset-inline-end:calc(100% + 7px); top:6px; bottom:6px; width:2px; background:var(--line); border-radius:2px;}
+.sp-row-card.is-collapsed .sp-row-toggle{background:var(--panel); color:var(--amber);}
+.sp-row-sum{padding:8px 14px 10px; font-size:13px; color:var(--text-dim);}
+.sp-ln-toggle{display:flex; align-items:center; gap:10px; min-height:48px; padding:6px 12px; margin:6px 0 10px; border:1.5px dashed var(--amber); border-radius:10px; font-weight:700; cursor:pointer;}
+.sp-ln-toggle input{width:22px; height:22px; accent-color:var(--amber);}
+.sp-grp-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:6px 0 10px;}
+.sp-grp-title{flex:1 1 100%; font-weight:800; font-size:14px;}
+.sp-grp-row .sp-ln-toggle{margin:0;}
+
+/* סדר הדוחות ב-PDF */
+.chapter-tab-order{border-style:dashed !important;}
+.rd-chorder{border:1.5px dashed var(--amber); border-radius:12px; padding:10px 12px; margin:-4px 0 14px; background:var(--panel);}
+.rd-chorder-title{font-size:13px; font-weight:800; margin-bottom:8px;}
+.rd-chorder-row{display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--line);}
+.rd-chorder-row:first-of-type{border-top:0;}
+.rd-chorder-row .del-panel-btn:disabled{opacity:.35;}
+
+/* ממסרי הגנה — מתגי DIP */
+.rl-dips{display:flex; flex-wrap:wrap; gap:14px 22px;}
+.rl-dip-label{font-size:12.5px; font-weight:700; margin-bottom:4px;}
+.rl-dip-row{display:flex; gap:3px; direction:ltr; background:#c62828; padding:5px 6px; border-radius:6px;}
+.rl-dip-sw{width:26px; height:48px; border:0; border-radius:3px; background:#e53935; position:relative; cursor:pointer; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; font-family:inherit;}
+.rl-dip-sw span{font-size:10px; color:#fff; font-weight:700; line-height:1; margin-bottom:2px;}
+.rl-dip-sw i{position:absolute; left:5px; right:5px; height:16px; bottom:14px; background:#fff; border-radius:2px; transition:bottom .12s;}
+.rl-dip-sw.on i{bottom:28px;}
+
+/* ===== תיקון (v2.2.507): בחירת כבל — "סוג הבידוד" נעלם אחרי בחירת חתך =====
+   ב-Safari/iPad חלונית בחירה (select) לא מתכווצת מתחת לרוחב האפשרות הארוכה שבה. אחרי בחירת חתך
+   ארוך (למשל 3X300+150) שורת הכבל נהייתה רחבה מהמלבן, וחלונית הבידוד נדחקה אל מחוץ למלבן (שחותך
+   את מה שחורג) — ונעלמה. עכשיו רשת עם עמודות קבועות שחייבות להיכנס ברוחב, ובמסך צר — הבידוד
+   יורד לשורה שנייה ברוחב מלא. */
+.sp-cable{display:grid !important; grid-template-columns:64px minmax(0,1fr) minmax(0,1.3fr); gap:6px; align-items:stretch;}
+.sp-cable > *{width:100% !important; min-width:0 !important; max-width:100% !important; box-sizing:border-box;}
+.sp-cable > :nth-child(4){grid-column:1 / -1;}
+@media (max-width:1100px){
+  .sp-cable{grid-template-columns:64px minmax(0,1fr);}
+  .sp-cable > :nth-child(n+3){grid-column:1 / -1;}
+}
+
+/* התראה: הדוח לא נשמר בענן */
+#rdCloudWarn{position:fixed; bottom:74px; left:50%; transform:translateX(-50%); z-index:130; min-height:48px; padding:0 22px; border-radius:999px; border:0; background:#B42318; color:#fff; font-weight:800; font-size:14.5px; box-shadow:0 6px 20px rgba(0,0,0,.25); cursor:pointer; font-family:inherit;}
+
+/* גידי AC — בחירת בדיקה לכל שורה */
+.sp-grp-sub{display:flex !important; align-items:center; gap:8px; cursor:pointer; font-weight:800;}
+.sp-grp-sub input{width:22px; height:22px; accent-color:var(--amber); margin:0; flex-shrink:0;}
+.sp-grp-sub.is-off{color:var(--text-dim); font-weight:600;}
+.sp-grp-off{font-weight:500; font-size:12.5px; color:var(--text-dim);}
+.sp-grp-hint{font-size:12.5px; color:var(--text-dim); margin:4px 0 8px;}
+
+/* טופס בדיקה של מתקן פוטו-וולטאי */
+.pv-table td.pv-item{font-size:13.5px; line-height:1.45;}
+.pv-table select.sp-status-sel{min-width:130px;}
+.pv-party{border:1px solid var(--line); border-radius:10px; padding:8px 12px 2px; margin-bottom:10px; background:var(--panel);}
+.pv-party-title{font-weight:800; margin-bottom:4px;}
+.pv-note-row{display:grid; grid-template-columns:34px minmax(0,2fr) minmax(0,1fr) auto; gap:8px; align-items:start;}
+@media (max-width:700px){ .pv-note-row{grid-template-columns:34px minmax(0,1fr) auto;} .pv-note-row textarea:nth-of-type(2){grid-column:2 / 3;} }
+#app canvas.pv-sig{width:100%; max-width:520px; height:150px; background:#fff; border:1.5px solid var(--line); border-radius:10px; touch-action:none; display:block;}
+/* דוח גמיש — מעבר מלל חופשי / סעיפים ממוספרים */
+.flex-mode-row{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;}
+.flex-mode-row .sp-mode-btn{min-height:48px; align-items:center;}
+/* צ'ק ליסט ללוח */
+.flex-cl-add{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 4px;}
+#app .flex-cl-add input{flex:1 1 220px; min-width:0;}
+.flex-cl-add .add-btn{width:auto; flex:0 0 auto; margin-top:0;}
+/* טופס 3 — שורת מיקום / גודל חיבור / גילוי / ניתוק / כיבוי מתחת לשם הלוח */
+.flex-fire{border:1.5px solid var(--amber); border-radius:12px; padding:10px 12px; margin:8px 0 12px; background:var(--panel2);}
+.flex-fire-top{display:grid; grid-template-columns:2fr 1fr; gap:10px;}
+.flex-fire-row{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px;}
+@media (max-width:700px){ .flex-fire-row{grid-template-columns:repeat(2, minmax(0,1fr));} .flex-fire-top{grid-template-columns:1fr;} }
+
+/* 📚 חוק החשמל */
+.law-search input{width:100%; min-height:50px; font-size:16px; border-radius:12px; padding:0 14px; border:1.5px solid var(--amber);}
+.law-body{margin-top:10px;}
+.law-reg{border:1px solid var(--line); border-radius:12px; margin-bottom:8px; overflow:hidden; background:var(--panel);}
+.law-reg-head{width:100%; display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 14px; background:none; border:0; font-weight:800; font-size:14.5px; text-align:right; cursor:pointer; font-family:inherit; color:var(--text);}
+.law-reg-count{font-weight:600; font-size:12px; color:var(--text-dim); white-space:nowrap;}
+.law-reg-body{border-top:1px solid var(--line); padding:6px 8px 10px;}
+.law-ch{font-size:12.5px; font-weight:800; color:var(--amber); margin:10px 6px 4px;}
+.law-row, .law-item{display:flex; flex-direction:column; align-items:stretch; gap:2px; width:100%; text-align:right; background:none; border:0; border-bottom:1px solid var(--line); padding:9px 8px; cursor:pointer; font-family:inherit; color:var(--text); font-size:14px;}
+.law-row{flex-direction:row; align-items:center; gap:10px;}
+.law-num{display:inline-flex; min-width:34px; height:26px; padding:0 6px; border-radius:8px; background:var(--navy, #0F2E4D); color:#fff; font-weight:800; font-size:12.5px; align-items:center; justify-content:center; margin-inline-end:8px;}
+.law-item-head{display:flex; align-items:center;}
+.law-item-reg{font-size:12px; color:var(--amber); font-weight:700;}
+.law-item-snip{font-size:12.5px; color:var(--text-dim); line-height:1.5;}
+.law-results-count{font-size:12.5px; color:var(--text-dim); margin-bottom:6px;}
+.law-sec .law-crumb{font-size:12.5px; color:var(--amber); font-weight:700; margin:10px 0 4px;}
+.law-sec-title{font-size:18px; margin:0 0 10px; display:flex; align-items:center;}
+.law-text{white-space:pre-wrap; line-height:1.75; font-size:15px; background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:14px 16px;}
+.law-actions{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 6px;}
+.law-actions .add-btn{width:auto; margin:0;}
+.law-body mark{background:#ffe08a; color:inherit; border-radius:3px; padding:0 2px;}
+
+/* טופס 3 (כבאות) */
+body.rd-fire-form3 section.card[data-key="meta"]{display:none !important;}
+.f3-import{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
+.f3-q{display:block; font-weight:800; margin:4px 0 8px;}
+.f3-opts{display:flex; flex-direction:column; gap:8px; margin-bottom:10px;}
+.f3-opt{display:flex; align-items:center; gap:12px; min-height:50px; padding:0 14px; border:1.5px solid var(--line); border-radius:12px; background:var(--panel); font-size:15px; font-weight:600; text-align:right; cursor:pointer; font-family:inherit; color:var(--text);}
+.f3-opt.on{border-color:var(--amber); background:var(--rd-sub-bg); font-weight:800;}
+.f3-radio{width:22px; height:22px; border-radius:50%; border:2px solid var(--text-dim); flex-shrink:0; position:relative;}
+.f3-opt.on .f3-radio{border-color:var(--amber);}
+.f3-opt.on .f3-radio::after{content:''; position:absolute; inset:4px; border-radius:50%; background:var(--amber);}
+.f3-panel{border:1.5px solid var(--line); border-right:4px solid #c62828; border-radius:12px; padding:10px 12px; margin-bottom:10px; background:var(--panel);}
+.f3-panel-head{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+.f3-panel-grid{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-bottom:8px;}
+.f3-panel-flags{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px;}
+@media (max-width:700px){ .f3-panel-grid{grid-template-columns:1fr;} }
+#app select.f3-sel{font-weight:800;}
+#app select.f3-sel.f3-yes{background:var(--ok); color:#fff; border-color:var(--ok);}
+#app select.f3-sel.f3-no{background:#9A3412; color:#fff; border-color:#9A3412;}
+#app select.f3-sel.f3-empty{background:var(--rd-pending-bg); border-color:var(--rd-pending-line);}
+/* טופס 3 — פרטי הבודק מההגדרות */
+.f3-insp{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px; margin-bottom:8px;}
+.f3-insp > div{border:1px solid var(--line); border-radius:10px; padding:8px 10px; background:var(--panel2); display:flex; flex-direction:column; gap:2px;}
+.f3-insp span{font-size:12px; color:var(--text-dim);}
+.f3-insp b{font-size:15px;}
+.f3-insp-sig img{max-height:46px; max-width:140px; object-fit:contain; background:#fff;}
+@media (max-width:700px){ .f3-insp{grid-template-columns:repeat(2, minmax(0,1fr));} }
+body.rd-fire-form3 #app .summary-bar{display:none !important;}
+/* v2.2.531 — מתג "הצג הצהרת החשמלאי המבצע בדוח": הטקסט לא נראה על הרקע הירוק */
+#app .decl-item{display:flex; align-items:center; gap:10px; min-height:48px; padding:8px 14px; border-radius:12px; font-size:15px; font-weight:700;}
+#app .decl-item span{color:var(--text);}
+#app .decl-item.on span{color:#fff;}
+#app .decl-item input[type=checkbox]{width:22px; height:22px; flex-shrink:0;}
+#app .decl-item.on{background:var(--ok) !important; border-color:var(--ok) !important;}
+#app .decl-item:not(.on){background:var(--panel) !important; border:1.5px solid var(--line) !important;}
+#app .instr-detail{font-size:13px; padding:6px 10px; margin-top:6px; border-radius:8px; background:var(--panel2); border:1px solid var(--line);}
+#app .instr-detail.miss{border-color:var(--amber); background:var(--rd-pending-bg);}
+#app .instr-detail.miss b{color:var(--bad); font-weight:700;}
+
+/* חלון "חסרים פרטים בדוח" */
+#missingItemsModal .missing-modal{max-width:560px;}
+.missing-list{display:flex; flex-direction:column; gap:6px; max-height:46vh; overflow-y:auto; margin-bottom:12px;}
+.missing-item{display:flex; align-items:center; gap:10px; min-height:44px; padding:6px 12px; border:1px solid var(--line); border-radius:10px; background:var(--panel2); text-align:right; font-size:14.5px; font-weight:600; cursor:pointer; font-family:inherit; color:var(--text);}
+.missing-item:hover{border-color:var(--amber);}
+.missing-dot{width:10px; height:10px; border-radius:50%; background:var(--amber); flex-shrink:0;}
+.missing-actions{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.missing-actions .add-btn{margin:0; min-height:50px; font-size:15px;}
+.missing-actions .missing-primary{background:var(--amber); color:#0F2E4D; border-color:var(--amber); font-weight:800;}
+@media (max-width:560px){ .missing-actions{grid-template-columns:1fr;} }
+#app .missing-flash{outline:3px solid var(--amber); outline-offset:3px; border-radius:10px; transition:outline-color .3s;}
+
+/* סיכום AI (v2.2.543) */
+.ai-sum-actions{display:flex; flex-wrap:wrap; gap:8px; margin:4px 0 10px;}
+.ai-sum-actions .add-btn{flex:1 1 220px; min-height:44px;}
+.ai-sum-actions .add-btn:disabled{opacity:.5; cursor:default;}
+#app .ai-sum-card textarea[data-textpath="aiSummary.text"]{width:100%; min-height:160px; line-height:1.6;}
+.ai-sum-review{margin-top:10px; padding:10px 12px; border-radius:8px; background:#fff6e6; border:1px solid #f0c36d; color:#5a3d00; font-size:12.5px; line-height:1.6;}
+.ai-sum-review.ok{background:#eaf7ec; border-color:#9fd3a8; color:#1d5b2a;}
+.ai-sum-toggle{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:13px;}
+
+/* חיפוש טיוטות (v2.2.545) */
+.drafts-search-row{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin:12px 0 10px;}
+.drafts-search-title{font-size:13px; font-weight:700; color:var(--text-dim); margin:6px 0 8px;}
+.draft-search-hit{margin-bottom:10px;}
+.draft-search-folder{font-size:11.5px; color:var(--text-dim); margin:0 4px 3px;}
+#app .drafts-search-row .field{display:flex; flex-direction:column; min-width:0;}
+#app .drafts-search-row .field input{width:100%; box-sizing:border-box; min-height:44px;}
