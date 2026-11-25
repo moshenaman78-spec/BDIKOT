@@ -155,8 +155,147 @@
     var pfInner = applyTablePreflight;
     applyTablePreflight = function (blocks) {
       var log = pfInner.apply(this, arguments);
-      try { splitOversize(blocks); } catch (e) { /* */ }
+      // splitOversize הוחלף ב-fillPages (סעיף 6), שמטפל גם בקטע גבוה מעמוד
       return log;
+    };
+  }
+
+  // ---------- 6. מילוי שארית העמוד בין טבלאות שלמות ----------
+  var NO_FILL = ['hc-summary', 'sp-stor-table', 'sp-ac-table', 'general-photos', 'inspector-license', 'soil-signature', 'dc-signatures', 'flex-signature'];
+  function unitsOf(html) {
+    var d = window.__shkMD(); var tmp = d.createElement('div'); tmp.innerHTML = html;
+    var nodes = Array.prototype.slice.call(tmp.children), units = [], cur = '';
+    nodes.forEach(function (n) {
+      // פסקת הערה (P) קצרה אחרי טבלה נשארת צמודה אליה
+      if (n.tagName === 'P' && !cur && units.length && (n.textContent || '').length < 400) { units[units.length - 1] += n.outerHTML; return; }
+      cur += n.outerHTML; if (!/^H[1-6]$/.test(n.tagName) && !n.classList.contains('page-logo-header')) { units.push(cur); cur = ''; }
+    });
+    if (cur) { if (units.length) units[units.length - 1] += cur; else units.push(cur); }
+    // יחידה אחרונה בלי טקסט (חתימה/חותמת) נשארת צמודה ליחידה שלפניה
+    if (units.length > 1) { var lt = d.createElement('div'); lt.innerHTML = units[units.length - 1]; if ((lt.textContent || '').trim().length < 5) { var lastU = units.pop(); units[units.length - 1] += lastU; } }
+    return units;
+  }
+  // זוג טבלאות זו-לצד-זו שלא נכנס בשארית העמוד — מוצג אחת מתחת לשנייה (כל אחת יחידה נפרדת)
+  function unpair(unitHtml) {
+    var d = window.__shkMD(); var tmp = d.createElement('div'); tmp.innerHTML = unitHtml;
+    var kids = Array.prototype.slice.call(tmp.children), pair = kids.filter(function (k) { return k.classList && k.classList.contains('preflight-2col'); })[0];
+    if (!pair) return null;
+    var before = '', after = '', seen = false;
+    kids.forEach(function (k) { if (k === pair) { seen = true; return; } if (!seen) before += k.outerHTML; else after += k.outerHTML; });
+    var cols = Array.prototype.slice.call(pair.children).map(function (c) { return c.innerHTML; }).filter(Boolean);
+    if (cols.length < 2) return null;
+    cols[0] = before + cols[0]; cols[cols.length - 1] += after;
+    return cols;
+  }
+  // מבטל מעברי עמוד שמנוע הטבלאות הישן הוסיף לפי הערכה לא מדויקת (אותו סעיף שפוצל) — החלוקה נקבעת כאן
+  function mergeEngineBreaks(blocks) {
+    var out = [];
+    blocks.forEach(function (b) {
+      var prev = out[out.length - 1];
+      if (prev && b.pageBreak && prev.sectionKey === b.sectionKey && prev.title === b.title && prev.level === b.level &&
+          !NO_FILL.some(function (k) { return (b.sectionKey || '').indexOf(k) === 0; })) {
+        out[out.length - 1] = Object.assign({}, prev, { html: prev.html + b.html });
+      } else out.push(b);
+    });
+    return out;
+  }
+  // מחזיר לכל סעיף את מעבר העמוד המקורי שלו, ומאחד חלקים שמנוע הטבלאות הישן פיצל (לפי הערכה לא מדויקת)
+  function restoreBreaks(blocks, orig) {
+    var out = [], oi = -1;
+    blocks.forEach(function (b) {
+      var k = b.sectionKey + '|' + b.title + '|' + b.level;
+      var land = NO_FILL.slice(0, 3).indexOf(b.sectionKey) >= 0;
+      if (oi >= 0 && orig[oi].k === k && out.length && !land) {   // המשך של אותו סעיף מקורי
+        var prev = out[out.length - 1];
+        out[out.length - 1] = Object.assign({}, prev, { html: prev.html + b.html });
+        return;
+      }
+      var j = oi + 1; while (j < orig.length && orig[j].k !== k) j++;
+      if (j < orig.length) oi = j;
+      out.push(land ? b : Object.assign({}, b, { pageBreak: j < orig.length ? orig[j].pb : !!b.pageBreak }));
+    });
+    blocks.length = 0; out.forEach(function (x) { blocks.push(x); });
+  }
+  // טבלה ארוכה (8+ שורות, עם שורת כותרות) ממשיכה לעמוד הבא בשורות שלמות; לפחות 4 שורות בכל צד; כותרות העמודות חוזרות
+  var MIN_ROWS = 3, MIN_TABLE_ROWS = 6;
+  function trySplitTable(unitHtml, room) {
+    var d = window.__shkMD(); var tmp = d.createElement('div'); tmp.innerHTML = unitHtml;
+    var kids = Array.prototype.slice.call(tmp.children);
+    var tail = []; while (kids.length && kids[kids.length - 1].tagName === 'P') tail.unshift(kids.pop()); // הערות אחרי הטבלה — עם החלק השני
+    var t = kids[kids.length - 1];
+    if (!t || t.tagName !== 'TABLE' || !t.tBodies.length || t.tBodies.length > 1) return null;
+    var heads = kids.slice(0, -1);
+    if (heads.some(function (h) { return !/^H[1-6]$/.test(h.tagName); })) return null;
+    var rows = Array.prototype.slice.call(t.tBodies[0].rows);
+    // טבלה בלי thead: שורת כותרת (תא שמתפרס על כל הרוחב) נחשבת כותרת וחוזרת בהמשך
+    var thead = t.tHead ? t.tHead.outerHTML : '';
+    if (!thead && rows.length && rows[0].cells.length === 1 && rows[0].cells[0].colSpan > 1) thead = '<thead>' + rows.shift().outerHTML + '</thead>';
+    if (rows.length < MIN_TABLE_ROWS) return null;
+    var open = t.outerHTML.slice(0, t.outerHTML.indexOf('>') + 1);
+    var tb = t.tBodies[0], tbOpen = tb.outerHTML.slice(0, tb.outerHTML.indexOf('>') + 1);
+    var mk = function (from, to, withHeads) {
+      return (withHeads ? heads.map(function (h) { return h.outerHTML; }).join('') : '') + open + thead + tbOpen +
+        rows.slice(from, to).map(function (r) { return r.outerHTML; }).join('') + '</tbody></table>';
+    };
+    var best = 0;
+    for (var k = rows.length - MIN_ROWS; k >= MIN_ROWS; k--) {
+      if (measureBlocks([mk(0, k, true)]).out[0] <= room) { best = k; break; }
+    }
+    if (!best) return null;
+    var last = heads.length ? heads[heads.length - 1] : null;
+    var contHead = last ? '<' + last.tagName.toLowerCase() + '>' + last.textContent.trim() + ' (המשך)</' + last.tagName.toLowerCase() + '>' : '';
+    return [mk(0, best, true), contHead + mk(best, rows.length, false) + tail.map(function (x) { return x.outerHTML; }).join('')];
+  }
+  function fillPages(blocks) {
+    var H = window.__shkPage.estH, SAFE = 10, res = [], used = Infinity, queue = blocks.slice(), guard = 0;
+    while (queue.length && guard++ < 2000) {
+      var b = queue.shift();
+      var h = measureBlocks([b.html]).out[0];
+      if (b.pageBreak || used === Infinity) used = 0;
+      if (NO_FILL.some(function (k) { return (b.sectionKey || '').indexOf(k) === 0; })) {
+        if (used + h > H) used = 0;
+        res.push(b); used += h; if (used > H) used = used % H; continue;
+      }
+      if (used + h <= H) { res.push(b); used += h; continue; }
+      var room = H - used - SAFE, units = unitsOf(b.html);
+      if (units.length === 1) { var up1 = unpair(units[0]); if (up1) units = up1; else { var sp1 = trySplitTable(units[0], room); if (sp1) units = sp1; } }
+      if (units.length > 1) {
+        var uh = measureBlocks(units).out, take = 0, acc = 0;
+        while (take < units.length - 1 && acc + uh[take] <= room) { acc += uh[take]; take++; }
+        var up = take < units.length ? unpair(units[take]) : null;
+        if (up) {
+          units = units.slice(0, take).concat(up, units.slice(take + 1)); uh = measureBlocks(units).out;
+          while (take < units.length - 1 && acc + uh[take] <= room) { acc += uh[take]; take++; }
+        }
+        var sp = take < units.length ? trySplitTable(units[take], room - acc) : null;
+        if (sp) { units = units.slice(0, take).concat(sp, units.slice(take + 1)); take++; }
+        if (take > 0) {
+          res.push(Object.assign({}, b, { html: units.slice(0, take).join('') }));
+          queue.unshift(Object.assign({}, b, { html: units.slice(take).join(''), pageBreak: true, __cont: true }));
+          used = H; continue;
+        }
+      }
+      if (used === 0) { res.push(b); used = h % H; continue; }  // יחידה אחת גבוהה מעמוד — כמו שהיא
+      queue.unshift(Object.assign({}, b, { pageBreak: true }));  // עוברת שלמה לעמוד חדש
+    }
+    blocks.length = 0; res.forEach(function (x) { blocks.push(x); });
+  }
+  if (window.__shkEstimatePatched && typeof applyTablePreflight === 'function') {
+    var pfInner2 = applyTablePreflight;
+    applyTablePreflight = function (blocks) {
+      var orig = (blocks || []).map(function (b) { return { k: b.sectionKey + '|' + b.title + '|' + b.level, pb: !!b.pageBreak }; });
+      var log = pfInner2.apply(this, arguments);
+      try { restoreBreaks(blocks, orig); fillPages(blocks); } catch (e) { /* */ }
+      return log;
+    };
+  }
+  // תוכן עניינים: המשך של סעיף לא מופיע כשורה נוספת
+  if (typeof buildTocTable === 'function') {
+    var origToc = buildTocTable;
+    buildTocTable = function (blocks, pages, totalPages) {
+      var b2 = [], p2 = [];
+      (blocks || []).forEach(function (b, i) { if (b && b.__cont) return; b2.push(b); p2.push(pages[i]); });
+      return origToc.call(this, b2, p2, totalPages);
     };
   }
 })();
